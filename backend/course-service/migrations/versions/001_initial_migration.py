@@ -77,6 +77,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Drop in reverse order of creation
     op.drop_index(op.f('ix_enrollments_id'), table_name='enrollments')
     op.drop_table('enrollments')
     op.drop_index(op.f('ix_feedbacks_id'), table_name='feedbacks')

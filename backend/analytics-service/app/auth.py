@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Build path to .env in root: Projet d'intégration/.env
 env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
@@ -27,7 +26,7 @@ def decode_jwt(token: str):
         )
 
         return {
-            "user_id": payload.get("userId"), # Node.js payload uses 'userId'
+            "user_id": payload.get("userId"),
             "role": payload.get("role"),
         }
 

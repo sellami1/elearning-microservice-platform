@@ -6,7 +6,6 @@ from ..models.analytics import EventType, UserRole
 
 class EventCreate(BaseModel):
     course_id: UUID
-    event_type: EventType
 
 class EventResponse(BaseModel):
     id: UUID

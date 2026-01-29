@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from ..database import Base
 
-SCHEMA_NAME = "analytics_schema"
+SCHEMA_NAME = "public"
 
 class EventType(str, enum.Enum):
     course_view = "course_view"
@@ -20,11 +20,11 @@ class AnalyticsEvent(Base):
     Stores raw events for every course view or enrollment.
     """
     __tablename__ = "analytics_events"
-    __table_args__ = {"schema": SCHEMA_NAME} # Explicitly place in 'analytics_schema'
+    __table_args__ = {"schema": SCHEMA_NAME}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_type = Column(Enum(EventType, name="event_type_enum", schema=SCHEMA_NAME), nullable=False)
-    user_id = Column(String(24), nullable=True)  # Supports 24-char MongoDB ObjectId strings
+    user_id = Column(String(24), nullable=True)
     course_id = Column(UUID(as_uuid=True), nullable=False)
     user_role = Column(Enum(UserRole, name="user_role_enum", schema=SCHEMA_NAME), nullable=False)
     

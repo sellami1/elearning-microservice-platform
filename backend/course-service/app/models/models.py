@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.db.session import Base
+from app.db.base import Base
 
 
 class Course(Base):

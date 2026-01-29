@@ -29,7 +29,12 @@ class Settings(BaseSettings):
     
     # User Microservice Configuration
     USER_SERVICE_URL: str = "http://localhost:8001"
-    
+
+    # JWT Configuration
+    SECRET_KEY: str = "your-secret-key-change-this-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

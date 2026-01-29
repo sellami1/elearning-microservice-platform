@@ -14,7 +14,7 @@ class UserRole(str, Enum):
 class UserDTO(BaseModel):
     """User Data Transfer Object (from User microservice)"""
     id: int
-    email: EmailStr
+    email: str
     role: UserRole
     first_name: str
     last_name: str

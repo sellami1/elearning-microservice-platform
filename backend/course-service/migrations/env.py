@@ -1,11 +1,16 @@
 """Database migration environment for Alembic"""
 from logging.config import fileConfig
 
+import os
+import sys
+# ensure project root is on PYTHONPATH so `import app` works
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-from app.db.session import Base
+from app.db.base import Base
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

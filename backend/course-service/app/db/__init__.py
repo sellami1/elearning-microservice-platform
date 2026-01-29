@@ -1,4 +1,5 @@
 """Database module initialization"""
-from app.db.session import Base, engine, SessionLocal, get_db
+from app.db.session import Base, engine, AsyncSessionLocal, get_db
 
-__all__ = ["Base", "engine", "SessionLocal", "get_db"]
+# Export same names where possible; consumers should import AsyncSession for typing
+__all__ = ["Base", "engine", "AsyncSessionLocal", "get_db"]

@@ -35,7 +35,6 @@ def get_top_courses(limit: int = 10, db: Session = Depends(get_db), current_user
     cache_key = "top_courses"
     cached_data = get_cache(cache_key)
     if cached_data:
-        # We might need to handle the limit if it changes, but the prompt says key is "top_courses"
         return cached_data[:limit]
 
     top_courses = db.query(

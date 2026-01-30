@@ -1,11 +1,15 @@
 import redis
-import os
 import json
 from typing import Any, Optional
+from .config import settings
 
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", 60))
+REDIS_HOST = settings.REDIS_HOST
+REDIS_PORT = settings.REDIS_PORT
+REDIS_TTL = settings.REDIS_TTL_SECONDS
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     redis_client = redis.Redis(
@@ -16,9 +20,9 @@ try:
     )
     # Test connection
     redis_client.ping()
-    print(f"Successfully connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
+    logger.info(f"Successfully connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
 except Exception as e:
-    print(f"Could not connect to Redis: {e}. Caching will be disabled.")
+    logger.warning(f"Could not connect to Redis: {e}. Caching will be disabled.")
     redis_client = None
 
 def get_cache(key: str) -> Optional[Any]:

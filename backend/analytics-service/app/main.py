@@ -1,11 +1,17 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy import text
+import logging
 from .routes import events, metrics
 from .database import engine, Base
 from .auth import get_current_user
 from .models.analytics import SCHEMA_NAME
 from fastapi.middleware.cors import CORSMiddleware
 from .cors import GranularCORSMiddleware
+from .core.logging_config import setup_logging
+
+# Initialize logging
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # --- DATABASE INITIALIZATION ---
 with engine.connect() as connection:

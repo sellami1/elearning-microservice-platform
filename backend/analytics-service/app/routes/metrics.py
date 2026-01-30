@@ -10,6 +10,9 @@ from ..auth import get_current_user
 from ..core.redis import get_cache, set_cache
 from pydantic import TypeAdapter
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 
@@ -18,7 +21,10 @@ def get_course_metrics(course_id: UUID, db: Session = Depends(get_db), current_u
     cache_key = f"course_metrics:{course_id}"
     cached_data = get_cache(cache_key)
     if cached_data:
+        logger.info(f"Cache hit for {cache_key}")
         return cached_data
+
+    logger.info(f"Cache miss for {cache_key}, fetching from database")
 
     metrics = db.query(CourseDailyMetric).filter(
         CourseDailyMetric.course_id == course_id
@@ -35,7 +41,10 @@ def get_top_courses(limit: int = 10, db: Session = Depends(get_db), current_user
     cache_key = "top_courses"
     cached_data = get_cache(cache_key)
     if cached_data:
+        logger.info(f"Cache hit for {cache_key}")
         return cached_data[:limit]
+
+    logger.info(f"Cache miss for {cache_key}, fetching from database")
 
     top_courses = db.query(
         CourseDailyMetric.course_id,

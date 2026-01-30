@@ -1,19 +1,10 @@
 from jose import jwt, JWTError, ExpiredSignatureError
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import os
-from pathlib import Path
-from dotenv import load_dotenv
+from .core.config import settings
 
-env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
-
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not JWT_SECRET_KEY:
-    import logging
-    logging.error("JWT_SECRET_KEY not found in environment variables!")
-
-JWT_ALGORITHM = "HS256"
+JWT_SECRET_KEY = settings.JWT_SECRET_KEY
+JWT_ALGORITHM = settings.JWT_ALGORITHM
 
 security = HTTPBearer()
 

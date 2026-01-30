@@ -6,6 +6,9 @@ from ..models.analytics import AnalyticsEvent, CourseDailyMetric, EventType
 from ..schemas.analytics import EventCreate, EventResponse
 from ..auth import get_current_user
 from ..core.redis import delete_cache
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -52,10 +55,12 @@ def record_event(event_in: EventCreate, event_type: EventType, db: Session, curr
         metric.enrollments_count += 1
         
     db.commit()
+    logger.info(f"Recorded {event_type} for course {event_in.course_id} by user {current_user['user_id']}")
     
     # Cache Invalidation: Delete relevant analytics keys
     delete_cache("top_courses")
     delete_cache(f"course_metrics:{event_in.course_id}")
+    logger.info(f"Invalidated cache for course {event_in.course_id}")
     
     db.refresh(db_event)
     return db_event

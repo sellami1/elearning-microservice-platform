@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test - Analytics Service</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f4f7f6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .test-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #eee;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>CORS Policy Test</h1>
+        <p>Use this file to verify that <strong>/metrics</strong> is public and <strong>/events</strong> is restricted.
+        </p>
+
+        <!-- Test Metrics -->
+        <div class="test-box">
+            <h3>Test 1: Metrics (Public)</h3>
+            <p>This should <strong>SUCCEED</strong> because it allows <code>*</code></p>
+            <button onclick="testMetrics()">Fetch Top Courses</button>
+            <div id="metrics-result"></div>
+        </div>
+
+        <!-- Test Events -->
+        <div class="test-box">
+            <h3>Test 2: Events (Restricted)</h3>
+            <p>This should <strong>FAIL</strong> with a CORS error in the console because it is restricted to
+                <code>course-service</code> origin.</p>
+            <button onclick="testEvents()">Record Mock View</button>
+            <div id="events-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = "http://localhost:8000";
+        const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTdiNTg3N2MyZDYyY2VlOTg5MGYwN2YiLCJyb2xlIjoibGVhcm5lciIsImlhdCI6MTc2OTc4MzMzNywiZXhwIjoxNzg2OTc2OTM3fQ.RM8KUzn-UcBapefprv_yASvaKKQOPMhY54C1jK8U9UM";
+
+        async function testMetrics() {
+            const resultDiv = document.getElementById('metrics-result');
+            resultDiv.innerHTML = "Fetching...";
+
+            try {
+                const response = await fetch(`${BASE_URL}/metrics/top-courses`, {
+                    headers: { 'Authorization': `Bearer ${TOKEN}` }
+                });
+                const data = await response.json();
+                resultDiv.innerHTML = `<p class="success">Success!</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (err) {
+                resultDiv.innerHTML = `<p class="error">Failed: ${err.message}</p>`;
+            }
+        }
+
+        async function testEvents() {
+            const resultDiv = document.getElementById('events-result');
+            resultDiv.innerHTML = "Sending...";
+
+            try {
+                const response = await fetch(`${BASE_URL}/events/view`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${TOKEN}`
+                    },
+                    body: JSON.stringify({ course_id: "00000000-0000-0000-0000-000000000000" })
+                });
+                const data = await response.json();
+                resultDiv.innerHTML = `<p class="success">Success (Unexpected if CORS is working):</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (err) {
+                resultDiv.innerHTML = `<p class="error">Blocked by CORS (Expected): ${err.message}</p><p>Check the Browser Console (F12) for the specific CORS error message.</p>`;
+            }
+        }
+    </script>
+
+</body>
+
+</html>

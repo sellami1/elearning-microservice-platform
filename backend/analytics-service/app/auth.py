@@ -9,6 +9,10 @@ env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    import logging
+    logging.error("JWT_SECRET_KEY not found in environment variables!")
+
 JWT_ALGORITHM = "HS256"
 
 security = HTTPBearer()

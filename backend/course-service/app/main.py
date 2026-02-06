@@ -1,85 +1,112 @@
-"""Application factory"""
-import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
-from app.api import router as api_router
-from app.db.init import init_db, check_db_connection, init_minio, check_minio_connection
+from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
+import logging
 
+from .core.config import get_settings
+from .database import create_tables, engine
+from .api.v1 import courses, lessons, enrollments, feedback
+from .api.dependencies import get_database
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
+settings = get_settings()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for startup/shutdown events
+    """
+    # Startup
+    logger.info("Starting Course Service...")
+    logger.info(f"Database URL: {settings.database_url}")
+    logger.info(f"MinIO Endpoint: {settings.minio_endpoint}")
+    
+    # Create tables if they don't exist
+    try:
+        create_tables()
+        logger.info("Database tables created/verified")
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        raise
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down Course Service...")
+    engine.dispose()
+
+# Create FastAPI app
 app = FastAPI(
-    title=settings.API_TITLE,
-    version=settings.API_VERSION,
-    debug=settings.DEBUG,
+    title=settings.app_name,
+    version=settings.app_version,
+    openapi_url="/api/v1/openapi.json",
+    docs_url="/api/v1/docs",
+    redoc_url="/api/v1/redoc",
+    lifespan=lifespan
 )
 
-# Add CORS middleware
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API routers
-app.include_router(api_router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize databases on startup"""
-    logger.info("Initializing databases and storage...")
-    
-    # Initialize PostgreSQL
-    if check_db_connection():
-        try:
-            init_db()
-            logger.info("PostgreSQL initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize PostgreSQL: {e}")
-    else:
-        logger.warning("Could not connect to PostgreSQL")
-    
-    # Initialize MinIO
-    if check_minio_connection():
-        try:
-            init_minio()
-            logger.info("MinIO initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize MinIO: {e}")
-    else:
-        logger.warning("Could not connect to MinIO")
-
-
-@app.get("/", tags=["root"])
-def root():
-    """Root endpoint"""
+# Health check endpoint
+@app.get("/health", tags=["Health"])
+async def health_check():
     return {
-        "message": "Welcome to E-Learning Platform API",
-        "version": settings.API_VERSION,
-        "environment": settings.ENVIRONMENT,
+        "status": "healthy",
+        "service": settings.app_name,
+        "version": settings.app_version
     }
 
+# API v1 routes
+app.include_router(
+    courses.router,
+    prefix="/api/v1/courses",
+    tags=["Courses"]
+)
 
-@app.get("/health", tags=["health"])
-def health_check():
-    """Health check endpoint"""
-    db_ok = check_db_connection()
-    minio_ok = check_minio_connection()
+app.include_router(
+    lessons.router,
+    prefix="/api/v1/lessons",
+    tags=["Lessons"]
+)
+
+# Error handlers
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
+
+# Root endpoint
+@app.get("/")
+async def root():
     return {
-        "status": "healthy" if (db_ok and minio_ok) else "degraded",
-        "database": "connected" if db_ok else "disconnected",
-        "storage": "connected" if minio_ok else "disconnected",
+        "message": f"Welcome to {settings.app_name}",
+        "version": settings.app_version,
+        "docs": "/api/v1/docs",
+        "health": "/health"
     }
-
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "app.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
+        host="0.0.0.0",
+        port=8000,
+        reload=settings.debug
     )

@@ -1,44 +1,36 @@
-import os
+from typing import Optional
+from pydantic import Field
 from pydantic_settings import BaseSettings
-
+from functools import lru_cache  # Add this import
 
 class Settings(BaseSettings):
-    """Application settings"""
+    # App
+    app_name: str = Field(default="Course Service", env="APP_NAME")
+    app_version: str = Field(default="1.0.0", env="APP_VERSION")
+    debug: bool = Field(default=False, env="DEBUG")
     
-    # API Configuration
-    API_TITLE: str = "E-Learning Platform API"
-    API_VERSION: str = "1.0.0"
-    DEBUG: bool = False
-    ENVIRONMENT: str = "development"
+    # Database
+    database_url: str = Field(..., env="DATABASE_URL")
     
-    # Server Configuration
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    # JWT
+    jwt_secret: str = Field(..., env="JWT_SECRET")
+    jwt_algorithm: str = Field(default="HS256", env="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     
-    # Database Configuration
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/elearning_db"
-    DATABASE_POOL_SIZE: int = 20
-    DATABASE_MAX_OVERFLOW: int = 10
+    # MinIO
+    minio_endpoint: str = Field(..., env="MINIO_ENDPOINT")
+    minio_access_key: str = Field(..., env="MINIO_ACCESS_KEY")
+    minio_secret_key: str = Field(..., env="MINIO_SECRET_KEY")
+    minio_bucket_name: str = Field(default="courses-media", env="MINIO_BUCKET_NAME")
+    minio_secure: bool = Field(default=False, env="MINIO_SECURE")
     
-    # MinIO Configuration
-    MINIO_URL: str = "http://localhost:9000"
-    MINIO_ACCESS_KEY: str = "minioadmin"
-    MINIO_SECRET_KEY: str = "minioadmin"
-    MINIO_BUCKET_NAME: str = "elearning"
-    MINIO_SECURE: bool = False
+    # CORS
+    cors_origins: list = ["*"]
     
-    # User Microservice Configuration
-    USER_SERVICE_URL: str = "http://localhost:8001"
-
-    # JWT Configuration
-    SECRET_KEY: str = "your-secret-key-change-this-in-production"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-
     class Config:
         env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+        case_sensitive = False  # This allows case-insensitive matching
 
-
-settings = Settings()
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()

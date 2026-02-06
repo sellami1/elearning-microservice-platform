@@ -1,21 +1,26 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, Text, Integer, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
-from app.db.base import Base
+from sqlalchemy.dialects.postgresql import UUID
+from .base import BaseModel
+import uuid
 
-
-class Lesson(Base):
-    """Lesson model"""
+class Lesson(BaseModel):
     __tablename__ = "lessons"
     
-    id = Column(Integer, primary_key=True, index=True)
-    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
-    title = Column(String(255), nullable=False)
-    content = Column(Text, nullable=True)
-    video_url = Column(String(255), nullable=True)
-    position = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Foreign keys
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, index=True)  # Parent course
+    
+    # Lesson content
+    title = Column(String(255), nullable=False)  # Lesson title
+    description = Column(Text, nullable=True)  # Lesson description
+    content_type = Column(String(50), nullable=False)  # Type: video, text, pdf, quiz
+    content_url = Column(String(500), nullable=True)  # Content file URL
+    duration_minutes = Column(Integer, default=0)  # Duration in minutes
+    
+    # Ordering and visibility
+    order_index = Column(Integer, nullable=False, default=0)  # Position in course
+    is_preview = Column(Boolean, default=False)  # Free preview flag
+    is_published = Column(Boolean, default=True)  # Published flag
     
     # Relationships
-    course = relationship("Course", back_populates="lessons")
+    course = relationship("Course", back_populates="lessons")  # Parent course

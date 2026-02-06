@@ -3,6 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 import uuid
 from enum import Enum
+import re
 
 class CourseLevel(str, Enum):
     BEGINNER = "beginner"
@@ -37,17 +38,15 @@ class CourseCreateForm(CourseBase):
     @validator('title')
     def validate_title(cls, v):
         """Validate title has no special characters that could cause issues"""
-        import re
         if not re.match(r'^[a-zA-Z0-9\s\-_,.!?\'"()]+$', v):
             raise ValueError('Title contains invalid characters')
         return v.strip()
 
 # Keep existing CourseCreate for other uses if needed
-class CourseCreate(CourseCreateForm):
-    """Schema for JSON-based course creation (backward compatibility)"""
-    thumbnail: Optional[str] = None  # URL or base64
 
-class CourseUpdate(BaseModel):
+
+class CourseUpdateForm(BaseModel):
+    """Schema for course updates via form data (multipart)"""
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     short_description: Optional[str] = Field(None, max_length=500)
@@ -58,7 +57,25 @@ class CourseUpdate(BaseModel):
     duration_hours: Optional[int] = Field(None, ge=0)
     published: Optional[bool] = None
     is_featured: Optional[bool] = None
-    thumbnail: Optional[str] = None
+    
+    @validator('price')
+    def validate_price(cls, v):
+        """Validate price is reasonable"""
+        if v is not None:
+            if v < 0:
+                raise ValueError('Price cannot be negative')
+            if v > 10000:  # Reasonable maximum
+                raise ValueError('Price cannot exceed $10,000')
+        return v
+    
+    @validator('title')
+    def validate_title(cls, v):
+        """Validate title has no special characters that could cause issues"""
+        if v is not None:
+            if not re.match(r'^[a-zA-Z0-9\s\-_,.!?\'"()]+$', v):
+                raise ValueError('Title contains invalid characters')
+            return v.strip()
+        return v
 
 class CourseInDB(CourseBase):
     id: uuid.UUID
@@ -71,6 +88,14 @@ class CourseInDB(CourseBase):
     updated_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+class CourseUpdateResponse(CourseInDB):
+    """Response schema for course update"""
+    thumbnail_updated: bool = False
+    
+    class Config:
+        from_attributes = True
+
 
 class CourseResponse(CourseInDB):
     pass

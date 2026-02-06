@@ -3,14 +3,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc, or_, and_
 import uuid
 from ..models.course import Course
-from ..schemas.course import CourseCreate, CourseUpdate, CourseCreateForm
+from ..schemas.course import CourseUpdateForm, CourseCreateForm
 
 class CRUDCourse:
     def get(self, db: Session, course_id: uuid.UUID) -> Optional[Course]:
         return db.query(Course).filter(Course.id == course_id).first()
-    
-    def get_by_instructor(self, db: Session, instructor_id: str) -> List[Course]:
-        return db.query(Course).filter(Course.instructor_id == instructor_id).all()
     
     def get_multi(
         self, 
@@ -86,7 +83,7 @@ class CRUDCourse:
         db: Session, 
         *, 
         db_obj: Course, 
-        obj_in: CourseUpdate
+        obj_in: CourseUpdateForm
     ) -> Course:
         update_data = obj_in.dict(exclude_unset=True, exclude={"thumbnail"})
         
@@ -117,18 +114,6 @@ class CRUDCourse:
         
         return query.count()
     
-    def update_rating(self, db: Session, course_id: uuid.UUID, new_rating: float) -> Course:
-        course = self.get(db, course_id)
-        if not course:
-            return None
-        
-        total_rating = course.rating * course.total_ratings
-        course.total_ratings += 1
-        course.rating = (total_rating + new_rating) / course.total_ratings
-        
-        db.add(course)
-        db.commit()
-        db.refresh(course)
-        return course
+
 
 course = CRUDCourse()

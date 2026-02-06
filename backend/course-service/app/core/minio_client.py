@@ -32,7 +32,7 @@ class MinIOClient:
                 detail=f"MinIO bucket error: {str(e)}"
             )
     
-    def validate_thumbnail_file(self, file: UploadFile) -> Tuple[bool, str]:
+    def _validate_thumbnail_file(self, file: UploadFile) -> Tuple[bool, str]:
         """
         Validate thumbnail image file
         Returns: (is_valid, error_message)
@@ -63,26 +63,52 @@ class MinIOClient:
         
         return True, ""
     
-    async def upload_thumbnail(self, file: UploadFile, course_id: str) -> str:
+    def extract_object_name(self, url: str) -> str:
+        """Extract object name from full MinIO URL"""
+        try:
+            # URL format: http(s)://endpoint/bucket/object_name
+            # Split by bucket name to get the path after it
+            parts = url.split(f"/{self.bucket_name}/")
+            if len(parts) > 1:
+                return parts[1]
+            return ""
+        except Exception:
+            return ""
+
+    async def upload_course_thumbnail(
+        self, 
+        file: UploadFile, 
+        course_id: str, 
+        delete_old: bool = True,
+        old_thumbnail_url: Optional[str] = None
+    ) -> Tuple[str, Optional[str]]:
         """
-        Upload thumbnail image to MinIO
+        Upload course thumbnail to MinIO
+        
+        Returns: (new_thumbnail_url, old_thumbnail_object_name)
         """
-        # Validate file
-        is_valid, error_msg = self.validate_thumbnail_file(file)
+        # Validate thumbnail file
+        is_valid, error_msg = self._validate_thumbnail_file(file)
         if not is_valid:
             raise HTTPException(status_code=400, detail=error_msg)
         
+        # Delete old thumbnail if requested
+        old_object_name = None
+        if delete_old and old_thumbnail_url:
+            old_object_name = self.extract_object_name(old_thumbnail_url)
+            if old_object_name:
+                self.delete_file(old_object_name)
+        
         try:
-            # Generate unique filename with original extension
+            # Generate unique filename
             file_extension = os.path.splitext(file.filename or "thumbnail")[1]
             filename = f"{uuid.uuid4()}{file_extension}"
             object_name = f"courses/{course_id}/thumbnails/{filename}"
             
-            # Read file content and wrap in a BytesIO stream for MinIO
+            # Read file content
             content = await file.read()
             data_stream = io.BytesIO(content)
-            data_stream.seek(0)
-
+            
             # Upload to MinIO
             self.client.put_object(
                 bucket_name=self.bucket_name,
@@ -93,8 +119,10 @@ class MinIOClient:
             )
             
             # Generate URL
-            url = f"http://{settings.minio_endpoint}/{self.bucket_name}/{object_name}"
-            return url
+            protocol = "https" if settings.minio_secure else "http"
+            new_url = f"{protocol}://{settings.minio_endpoint}/{self.bucket_name}/{object_name}"
+            
+            return new_url, old_object_name
             
         except S3Error as e:
             raise HTTPException(

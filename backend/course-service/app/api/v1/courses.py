@@ -6,14 +6,15 @@ import uuid
 from ...database import get_db
 from ...crud import course as crud_course
 from ...schemas.course import (
-    CourseBase, CourseCreate, CourseUpdate, CourseResponse, 
-    CourseListResponse, CourseLevel, CourseCreateForm
+    CourseBase, CourseUpdateForm, CourseResponse, 
+    CourseListResponse, CourseLevel, CourseCreateForm, CourseUpdateResponse
 )
 from ...core.security import get_current_user, get_current_instructor
 from ...core.minio_client import minio_client
 
 router = APIRouter()
 
+##### Should be without signin #####
 @router.get("/", response_model=CourseListResponse)
 def get_courses(
     db: Session = Depends(get_db),
@@ -131,7 +132,7 @@ async def create_course(
         # Upload thumbnail if provided
         thumbnail_url = None
         if thumbnail_file and thumbnail_file.filename:
-            thumbnail_url = await minio_client.upload_thumbnail(
+            thumbnail_url, _ = await minio_client.upload_course_thumbnail(
                 thumbnail_file, str(db_course.id)
             )
             
@@ -156,70 +157,132 @@ async def create_course(
             detail=f"Course creation failed: {str(e)}"
         )
 
-@router.post("/{course_id}/upload-thumbnail", response_model=CourseResponse)
-async def upload_course_thumbnail(
-    course_id: uuid.UUID = Path(...),
-    thumbnail_file: UploadFile = File(...),
+@router.put("/{course_id}", response_model=CourseUpdateResponse)
+async def update_course(
+    course_id: uuid.UUID = Path(..., description="Course ID to update"),
+    title: Optional[str] = Form(None, min_length=1, max_length=255),
+    description: Optional[str] = Form(None),
+    short_description: Optional[str] = Form(None, max_length=500),
+    price: Optional[float] = Form(None, ge=0.0),
+    category: Optional[str] = Form(None, max_length=100),
+    subcategory: Optional[str] = Form(None, max_length=100),
+    level: Optional[CourseLevel] = Form(None),
+    duration_hours: Optional[int] = Form(None, ge=0),
+    published: Optional[bool] = Form(None),
+    is_featured: Optional[bool] = Form(None),
+    thumbnail_file: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_instructor),
     db: Session = Depends(get_db),
 ):
     """
-    Upload/update thumbnail for an existing course
+    Update a course with optional thumbnail upload (Multipart Form Data)
+    
+    - All fields are optional - only provided fields will be updated
+    - **thumbnail_file**: New thumbnail image (jpg, png, gif, webp, svg - max 5MB)
+    - Returns updated course with thumbnail_updated flag
     """
-    # Check if course exists and user owns it
-    db_course = crud_course.course.get(db, course_id=course_id)
-    if not db_course:
+    try:
+        # Check if course exists
+        db_course = crud_course.course.get(db, course_id=course_id)
+        if not db_course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Course not found"
+            )
+        
+        # Check ownership (admin can update any course)
+        if current_user["role"] != "admin" and db_course.instructor_id != current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to update this course"
+            )
+        
+        thumbnail_updated = False
+        old_thumbnail_url = db_course.thumbnail_url
+        
+        # Handle new thumbnail upload
+        if thumbnail_file and thumbnail_file.filename:
+            # Validate and upload new thumbnail (handles old file deletion internally)
+            new_thumbnail_url, _ = await minio_client.upload_course_thumbnail(
+                thumbnail_file, 
+                str(course_id),
+                delete_old=True,
+                old_thumbnail_url=db_course.thumbnail_url
+            )
+            
+            # Update database with new thumbnail URL
+            db_course.thumbnail_url = new_thumbnail_url
+            thumbnail_updated = True
+        
+        # Prepare update data for other fields
+        update_data = {}
+        if title is not None:
+            update_data["title"] = title
+        if description is not None:
+            update_data["description"] = description
+        if short_description is not None:
+            update_data["short_description"] = short_description
+        if price is not None:
+            update_data["price"] = price
+        if category is not None:
+            update_data["category"] = category
+        if subcategory is not None:
+            update_data["subcategory"] = subcategory
+        if level is not None:
+            update_data["level"] = level
+        if duration_hours is not None:
+            update_data["duration_hours"] = duration_hours
+        if published is not None:
+            update_data["published"] = published
+        if is_featured is not None:
+            update_data["is_featured"] = is_featured
+        
+        # Update other course fields if any were provided
+        if update_data:
+            # Create update object
+            course_update = CourseUpdateForm(**update_data)
+            
+            # Use existing CRUD update method (only for database fields)
+            db_course = crud_course.course.update(
+                db, db_obj=db_course, obj_in=course_update
+            )
+        else:
+            # If only thumbnail was updated, we still need to commit the change
+            if thumbnail_updated:
+                db.add(db_course)
+                db.commit()
+                db.refresh(db_course)
+        
+        # Convert to response model
+        response_data = CourseUpdateResponse.from_orm(db_course)
+        response_data.thumbnail_updated = thumbnail_updated
+        
+        return response_data
+        
+    except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Course not found"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
         )
-    
-    if db_course.instructor_id != current_user["user_id"] and current_user["role"] != "admin":
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this course"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Course update failed: {str(e)}"
         )
-    
-    # Upload thumbnail
-    thumbnail_url = await minio_client.upload_thumbnail(
-        thumbnail_file, str(course_id)
-    )
-    
-    # Update course with new thumbnail URL
-    db_course = crud_course.course.update_thumbnail(
-        db, course_id=course_id, thumbnail_url=thumbnail_url
-    )
-    
-    return db_course
-
-@router.put("/{course_id}", response_model=CourseResponse)
-def update_course(
-    course_id: uuid.UUID = Path(...),
-    course_in: CourseUpdate = None,
-    current_user: dict = Depends(get_current_instructor),
-    db: Session = Depends(get_db),
-):
-    """
-    Update a course (instructor or admin only)
-    """
-    db_course = crud_course.course.get(db, course_id=course_id)
-    if not db_course:
+        
+    except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Course not found"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
         )
-    
-    # Check ownership (admin can update any course)
-    if current_user["role"] != "admin" and db_course.instructor_id != current_user["user_id"]:
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this course"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Course update failed: {str(e)}"
         )
-    
-    db_course = crud_course.course.update(
-        db, db_obj=db_course, obj_in=course_in
-    )
-    return db_course
 
 @router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_course(
@@ -244,7 +307,21 @@ def delete_course(
             detail="Not authorized to delete this course"
         )
     
+    # Capture thumbnail URL before deletion
+    thumbnail_url = db_course.thumbnail_url
+
     crud_course.course.delete(db, course_id=course_id)
+    
+    # Delete thumbnail from MinIO if it exists
+    if thumbnail_url:
+        try:
+            object_name = minio_client.extract_object_name(thumbnail_url)
+            if object_name:
+                minio_client.delete_file(object_name)
+        except Exception as e:
+            # Log error but don't fail the request (course is already deleted)
+            print(f"Warning: Failed to delete thumbnail for deleted course: {e}")
+    
     return None
 
 @router.get("/instructor/mine", response_model=List[CourseResponse])

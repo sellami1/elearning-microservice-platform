@@ -20,14 +20,44 @@ class CRUDCourse:
         
         # Apply filters
         if filters:
-            if "published" in filters:
-                query = query.filter(Course.published == filters["published"])
+            # Special handling for current instructor: show own courses + published courses from others
+            if "current_instructor_id" in filters:
+                instructor_id = filters["current_instructor_id"]
+                
+                # Base condition: own courses OR published courses
+                base_condition = or_(
+                    Course.instructor_id == instructor_id,
+                    Course.published == True
+                )
+                
+                # If published filter is explicitly set, apply it
+                if "published" in filters:
+                    if filters["published"] == True:
+                        # Only published courses (own + others)
+                        base_condition = and_(
+                            base_condition,
+                            Course.published == True
+                        )
+                    else:
+                        # Only unpublished courses (must be own)
+                        base_condition = and_(
+                            Course.instructor_id == instructor_id,
+                            Course.published == False
+                        )
+                
+                query = query.filter(base_condition)
+            else:
+                # Standard filtering for non-instructor users
+                if "published" in filters:
+                    query = query.filter(Course.published == filters["published"])
+                if "instructor_id" in filters:
+                    query = query.filter(Course.instructor_id == filters["instructor_id"])
+            
+            # Apply other filters (common to all users)
             if "category" in filters:
                 query = query.filter(Course.category == filters["category"])
             if "level" in filters:
                 query = query.filter(Course.level == filters["level"])
-            if "instructor_id" in filters:
-                query = query.filter(Course.instructor_id == filters["instructor_id"])
             if "is_featured" in filters:
                 query = query.filter(Course.is_featured == filters["is_featured"])
             if "search" in filters:
@@ -105,12 +135,42 @@ class CRUDCourse:
         query = db.query(Course)
         
         if filters:
-            if "published" in filters:
-                query = query.filter(Course.published == filters["published"])
+            # Special handling for current instructor: show own courses + published courses from others
+            if "current_instructor_id" in filters:
+                instructor_id = filters["current_instructor_id"]
+                
+                # Base condition: own courses OR published courses
+                base_condition = or_(
+                    Course.instructor_id == instructor_id,
+                    Course.published == True
+                )
+                
+                # If published filter is explicitly set, apply it
+                if "published" in filters:
+                    if filters["published"] == True:
+                        # Only published courses (own + others)
+                        base_condition = and_(
+                            base_condition,
+                            Course.published == True
+                        )
+                    else:
+                        # Only unpublished courses (must be own)
+                        base_condition = and_(
+                            Course.instructor_id == instructor_id,
+                            Course.published == False
+                        )
+                
+                query = query.filter(base_condition)
+            else:
+                # Standard filtering for non-instructor users
+                if "published" in filters:
+                    query = query.filter(Course.published == filters["published"])
+                if "instructor_id" in filters:
+                    query = query.filter(Course.instructor_id == filters["instructor_id"])
+            
+            # Apply other filters (common to all users)
             if "category" in filters:
                 query = query.filter(Course.category == filters["category"])
-            if "instructor_id" in filters:
-                query = query.filter(Course.instructor_id == filters["instructor_id"])
         
         return query.count()
     

@@ -5,16 +5,22 @@ import uuid
 
 from ...database import get_db
 from ...crud import course as crud_course
+from ...crud import lesson as crud_lesson
 from ...schemas.course import (
     CourseBase, CourseUpdateForm, CourseResponse, 
     CourseListResponse, CourseLevel, CourseCreateForm, CourseUpdateResponse
 )
-from ...core.security import get_current_user, get_current_instructor
+from ...core.auth import get_current_user, get_current_instructor, get_current_user_optional
 from ...core.minio_client import minio_client
 
 router = APIRouter()
 
-##### Should be without signin #####
+##### Should be without signin ###################
+##### Student can only get published ones ########
+# List + Get one: For every one (students + public: only published)
+# List and get for instructor: Only he's ones (adding the another get_one for the current instructor)
+# Create + Update + Delete: Only for current instructor
+##################################################
 @router.get("/", response_model=CourseListResponse)
 def get_courses(
     db: Session = Depends(get_db),
@@ -26,15 +32,17 @@ def get_courses(
     is_featured: Optional[bool] = Query(None),
     search: Optional[str] = Query(None),
     instructor_id: Optional[str] = Query(None),
-    # Add current_user parameter to include user context if needed
-    current_user: dict = Depends(get_current_user),
+    current_user: Optional[dict] = Depends(get_current_user_optional),
 ):
     """
-    Get all courses with optional filtering
+    Get all courses with optional filtering.
+    
+    Access control:
+    - Current instructor: sees all their own courses (published + unpublished) 
+                         + all published courses from other instructors
+    - Other users (students, other instructors, guests): see only published courses
     """
     filters = {}
-    if published is not None:
-        filters["published"] = published
     if category:
         filters["category"] = category
     if level:
@@ -43,8 +51,32 @@ def get_courses(
         filters["is_featured"] = is_featured
     if search:
         filters["search"] = search
-    if instructor_id:
-        filters["instructor_id"] = instructor_id
+    
+    # Role-based visibility logic
+    if current_user and current_user.get("role") == "instructor":
+        # Current instructor sees:
+        # 1. All their own courses (published and unpublished)
+        # 2. All published courses from other instructors
+        
+        # If instructor_id filter is explicitly provided, use it
+        if instructor_id:
+            filters["instructor_id"] = instructor_id
+            # Honor published filter if provided
+            if published is not None:
+                filters["published"] = published
+        else:
+            # No instructor_id filter: get own courses + published courses from others
+            # This requires special handling in the CRUD layer
+            filters["current_instructor_id"] = current_user["user_id"]
+            # Honor published filter if provided (applies to all courses)
+            if published is not None:
+                filters["published"] = published
+    else:
+        # Students, other instructors (not current), and guests can only see published courses
+        filters["published"] = True
+        # Honor instructor_id filter if provided
+        if instructor_id:
+            filters["instructor_id"] = instructor_id
     
     courses = crud_course.course.get_multi(
         db, skip=skip, limit=limit, filters=filters
@@ -63,6 +95,7 @@ def get_courses(
 def get_course(
     course_id: uuid.UUID = Path(...),
     db: Session = Depends(get_db),
+    current_user: Optional[dict] = Depends(get_current_user_optional),
 ):
     """
     Get course by ID
@@ -75,7 +108,14 @@ def get_course(
         )
     
     # Only return published courses to non-owners
-    # (Check for ownership is done in separate endpoints)
+    is_owner = current_user and current_user.get("role") == "instructor" and db_course.instructor_id == current_user["user_id"]
+    
+    if not is_owner and not db_course.published:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+    
     return db_course
 
 @router.post("/", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
@@ -190,8 +230,8 @@ async def update_course(
                 detail="Course not found"
             )
         
-        # Check ownership (admin can update any course)
-        if current_user["role"] != "admin" and db_course.instructor_id != current_user["user_id"]:
+        # Check ownership
+        if db_course.instructor_id != current_user["user_id"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to update this course"
@@ -291,7 +331,12 @@ def delete_course(
     db: Session = Depends(get_db),
 ):
     """
-    Delete a course (instructor or admin only)
+    Delete a course and all associated content (instructor only)
+    
+    This endpoint will:
+    - Delete the course from the database
+    - Delete all associated lesson content files from MinIO storage
+    - Delete the course thumbnail from MinIO storage
     """
     db_course = crud_course.course.get(db, course_id=course_id)
     if not db_course:
@@ -300,8 +345,8 @@ def delete_course(
             detail="Course not found"
         )
     
-    # Check ownership (admin can delete any course)
-    if current_user["role"] != "admin" and db_course.instructor_id != current_user["user_id"]:
+    # Check ownership
+    if db_course.instructor_id != current_user["user_id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this course"
@@ -309,10 +354,27 @@ def delete_course(
     
     # Capture thumbnail URL before deletion
     thumbnail_url = db_course.thumbnail_url
-
+    
+    # Get all lessons for this course (published and unpublished)
+    course_lessons = crud_lesson.lesson.get_by_course(
+        db, course_id=course_id, published_only=False
+    )
+    
+    # Delete course from database first
     crud_course.course.delete(db, course_id=course_id)
     
-    # Delete thumbnail from MinIO if it exists
+    # Delete all lesson content files from MinIO
+    for lesson in course_lessons:
+        if lesson.content_url:
+            try:
+                object_name = minio_client.extract_object_name(lesson.content_url)
+                if object_name:
+                    minio_client.delete_file(object_name)
+            except Exception as e:
+                # Log error but don't fail the request (course is already deleted)
+                print(f"Warning: Failed to delete lesson content for lesson {lesson.id}: {e}")
+    
+    # Delete course thumbnail from MinIO if it exists
     if thumbnail_url:
         try:
             object_name = minio_client.extract_object_name(thumbnail_url)

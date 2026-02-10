@@ -175,19 +175,6 @@ class MinIOClient:
         except S3Error:
             pass
     
-    def get_presigned_url(self, object_name: str, expiry_hours: int = 24) -> str:
-        """Generate presigned URL for temporary access"""
-        try:
-            url = self.client.presigned_get_object(
-                bucket_name=self.bucket_name,
-                object_name=object_name,
-                expires=timedelta(hours=expiry_hours)
-            )
-            return url
-        except S3Error as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to generate URL: {str(e)}"
-            )
+
 
 minio_client = MinIOClient()

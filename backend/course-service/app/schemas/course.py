@@ -38,12 +38,9 @@ class CourseCreateForm(CourseBase):
     @validator('title')
     def validate_title(cls, v):
         """Validate title has no special characters that could cause issues"""
-        if not re.match(r'^[a-zA-Z0-9\s\-_,.!?\'"()]+$', v):
+        if not re.match(r'^[a-zA-Z0-9\s\-_,.!?\'"()&]+$', v):
             raise ValueError('Title contains invalid characters')
         return v.strip()
-
-# Keep existing CourseCreate for other uses if needed
-
 
 class CourseUpdateForm(BaseModel):
     """Schema for course updates via form data (multipart)"""
@@ -72,7 +69,7 @@ class CourseUpdateForm(BaseModel):
     def validate_title(cls, v):
         """Validate title has no special characters that could cause issues"""
         if v is not None:
-            if not re.match(r'^[a-zA-Z0-9\s\-_,.!?\'"()]+$', v):
+            if not re.match(r'^[a-zA-Z0-9\s\-_,.!?\'"()&]+$', v):
                 raise ValueError('Title contains invalid characters')
             return v.strip()
         return v

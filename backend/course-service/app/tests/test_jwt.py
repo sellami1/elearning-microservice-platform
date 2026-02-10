@@ -14,7 +14,7 @@ def generate_test_tokens():
     # Sample user data (MongoDB ObjectId as string)
     users = [
         {
-            "id": "507f1f77bcf86cd799439011",  # MongoDB ObjectId string
+            "id": "507f1f77bcf86cd799439012",  # MongoDB ObjectId string
             "role": "instructor",
             "email": "instructor@example.com"
         },

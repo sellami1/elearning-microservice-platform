@@ -136,6 +136,7 @@ class MinIOClient:
         """
         Upload lesson content file to MinIO
         """
+        
         try:
             file_extension = os.path.splitext(file.filename or "")[1]
             filename = f"{uuid.uuid4()}{file_extension}"

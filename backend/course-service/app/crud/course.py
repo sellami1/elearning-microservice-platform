@@ -6,6 +6,33 @@ from ..models.course import Course
 from ..schemas.course import CourseUpdateForm, CourseCreateForm
 
 class CRUDCourse:
+    def get_by_instructor(
+        self, 
+        db: Session, 
+        instructor_id: str, 
+        published_only: bool = False,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[Course]:
+        """Get all courses by instructor ID"""
+        query = db.query(Course).filter(Course.instructor_id == instructor_id)
+        if published_only:
+            query = query.filter(Course.published == True)
+        query = query.order_by(desc(Course.created_at))
+        return query.offset(skip).limit(limit).all()
+    
+    def count_by_instructor(
+        self,
+        db: Session,
+        instructor_id: str,
+        published_only: bool = False
+    ) -> int:
+        """Count courses by instructor ID"""
+        query = db.query(Course).filter(Course.instructor_id == instructor_id)
+        if published_only:
+            query = query.filter(Course.published == True)
+        return query.count()
+
     def get(self, db: Session, course_id: uuid.UUID) -> Optional[Course]:
         return db.query(Course).filter(Course.id == course_id).first()
     

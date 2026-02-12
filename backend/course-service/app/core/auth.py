@@ -69,5 +69,5 @@ def require_role(allowed_roles: list[str]):
 def get_current_instructor(current_user: dict = Depends(require_role(["instructor"]))):
     return current_user
 
-def get_current_student(current_user: dict = Depends(require_role(["student"]))):
+def get_current_student(current_user: dict = Depends(require_role(["learner"]))):
     return current_user

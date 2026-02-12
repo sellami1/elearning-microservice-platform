@@ -19,8 +19,8 @@ def generate_test_tokens():
             "email": "instructor@example.com"
         },
         {
-            "id": "507f1f77bcf86cd799439012",
-            "role": "student", 
+            "id": "507f1f77bcf86cd799439020",
+            "role": "learner", 
             "email": "student@example.com"
         },
         {

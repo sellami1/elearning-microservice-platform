@@ -37,4 +37,3 @@ class Course(BaseModel):
     # Relationships
     lessons = relationship("Lesson", back_populates="course", cascade="all, delete-orphan")  # Course lessons
     enrollments = relationship("Enrollment", back_populates="course", cascade="all, delete-orphan")  # Student enrollments
-    feedbacks = relationship("Feedback", back_populates="course", cascade="all, delete-orphan")  # Course feedbacks

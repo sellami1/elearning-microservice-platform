@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, Form, File, UploadFile, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, Form, File, UploadFile
 from sqlalchemy.orm import Session
 import uuid
 
@@ -8,7 +8,7 @@ from ...crud import lesson as crud_lesson
 from ...crud import course as crud_course
 from ...schemas.lesson import (
     LessonCreateForm, LessonUpdate, LessonResponse, 
-    LessonListResponse, ContentType, LessonUploadResponse
+    LessonListResponse, ContentType
 )
 from ...core.auth import get_current_user, get_current_instructor, get_current_student, get_current_user_optional
 from ...core.minio_client import minio_client
@@ -363,127 +363,3 @@ def delete_lesson(
     crud_lesson.lesson.delete(db, lesson_id=lesson_id)
     
     return None
-
-# @router.post("/{lesson_id}/upload-content", response_model=LessonUploadResponse)
-# async def upload_lesson_content(
-#     lesson_id: uuid.UUID = Path(..., description="Lesson ID"),
-#     content_file: UploadFile = File(..., description="Content file to upload"),
-#     current_user: dict = Depends(get_current_instructor),
-#     db: Session = Depends(get_db),
-# ):
-#     """
-#     Upload content file for a lesson (replaces existing content)
-    
-#     - **lesson_id**: UUID of the lesson
-#     - **content_file**: Content file (required)
-#     - Returns upload confirmation with content URL
-#     """
-#     db_lesson = crud_lesson.lesson.get(db, lesson_id=lesson_id)
-#     if not db_lesson:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Lesson not found"
-#         )
-    
-#     # Check ownership
-#     db_course = crud_course.course.get(db, course_id=db_lesson.course_id)
-#     if db_course.instructor_id != current_user["user_id"] and current_user["role"] != "admin":
-#         raise HTTPException(
-#             status_code=status.HTTP_403_FORBIDDEN,
-#             detail="Not authorized to upload content for this lesson"
-#         )
-    
-#     # Delete old file if exists
-#     if db_lesson.content_url:
-#         minio_client.delete_file(db_lesson.content_url)
-    
-#     # Upload new file
-#     content_url = await minio_client.upload_lesson_content(
-#         content_file,
-#         str(db_lesson.course_id),
-#         str(lesson_id),
-#         db_lesson.content_type.value
-#     )
-    
-#     # Update lesson with new content URL
-#     db_lesson = crud_lesson.lesson.update_content_url(
-#         db, lesson_id=lesson_id, content_url=content_url
-#     )
-    
-#     return LessonUploadResponse(
-#         lesson_id=lesson_id,
-#         content_url=content_url,
-#         message="Content uploaded successfully"
-#     )
-
-# @router.put("/{lesson_id}/publish", response_model=LessonResponse)
-# def publish_lesson(
-#     lesson_id: uuid.UUID = Path(..., description="Lesson ID"),
-#     publish: bool = Query(True, description="True to publish, False to unpublish"),
-#     current_user: dict = Depends(get_current_instructor),
-#     db: Session = Depends(get_db),
-# ):
-#     """
-#     Publish or unpublish a lesson
-    
-#     - **lesson_id**: UUID of the lesson
-#     - **publish**: True to publish, False to unpublish
-#     - Returns updated lesson
-#     """
-#     db_lesson = crud_lesson.lesson.get(db, lesson_id=lesson_id)
-#     if not db_lesson:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Lesson not found"
-#         )
-    
-#     # Check ownership
-#     db_course = crud_course.course.get(db, course_id=db_lesson.course_id)
-#     if db_course.instructor_id != current_user["user_id"] and current_user["role"] != "admin":
-#         raise HTTPException(
-#             status_code=status.HTTP_403_FORBIDDEN,
-#             detail="Not authorized to modify this lesson"
-#         )
-    
-#     # Update published status
-#     db_lesson.is_published = publish
-#     db.add(db_lesson)
-#     db.commit()
-#     db.refresh(db_lesson)
-    
-#     return db_lesson
-
-# @router.post("/reorder", response_model=List[LessonResponse])
-# def reorder_lessons(
-#     course_id: uuid.UUID = Body(..., embed=True, description="Course ID"),
-#     new_order: List[uuid.UUID] = Body(..., embed=True, description="New order of lesson IDs"),
-#     current_user: dict = Depends(get_current_instructor),
-#     db: Session = Depends(get_db),
-# ):
-#     """
-#     Reorder lessons in a course
-    
-#     - **course_id**: UUID of the course
-#     - **new_order**: List of lesson IDs in new order
-#     - Returns reordered list of lessons
-#     """
-#     # Check if course exists and user owns it
-#     db_course = crud_course.course.get(db, course_id=course_id)
-#     if not db_course:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Course not found"
-#         )
-    
-#     if db_course.instructor_id != current_user["user_id"] and current_user["role"] != "admin":
-#         raise HTTPException(
-#             status_code=status.HTTP_403_FORBIDDEN,
-#             detail="Not authorized to reorder lessons in this course"
-#         )
-    
-#     # Reorder lessons
-#     lessons = crud_lesson.lesson.reorder_lessons(
-#         db, course_id=course_id, new_order=new_order
-#     )
-    
-#     return lessons

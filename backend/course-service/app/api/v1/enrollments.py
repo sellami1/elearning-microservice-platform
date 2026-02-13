@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 import uuid
 
@@ -9,8 +9,7 @@ from ...crud import course as crud_course
 from ...crud import lesson as crud_lesson
 from ...schemas.enrollment import (
     EnrollmentCreate, EnrollmentUpdate, EnrollmentResponse,
-    EnrollmentWithCourse, EnrollmentListResponse, EnrollmentStats,
-    LessonProgressUpdate
+    EnrollmentWithCourse, EnrollmentListResponse, EnrollmentStats
 )
 from ...core.auth import get_current_student, get_current_instructor
 

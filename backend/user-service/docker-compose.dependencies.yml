@@ -1,0 +1,29 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: user-service-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: user_service_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - user_service_mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "mongodb://localhost:27017/admin", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: user-service-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  user_service_mongodb_data:
+    driver: local

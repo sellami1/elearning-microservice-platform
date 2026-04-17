@@ -1,7 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
-dotenv.config({ path: "../../.env" });
 const path = require("path");
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const morgan = require("morgan");
 const cors = require("cors");
 const compression = require("compression");
@@ -12,6 +12,7 @@ const globalError = require("./middleware/errorMiddleware");
 const dbConnection = require("./config/db");
 const mountRoutes = require("./routes");
 const { globalLimiter } = require("./utils/rateLimiter");
+const { logger, isDevEnv } = require("./utils/logger");
 
 dbConnection();
 const app = express();
@@ -28,9 +29,15 @@ app.use(express.json({ limit: "20kb" }));
 app.use(mongoSanitize());
 app.use(xss());
 
-if (process.env.USER_BACKEND_ENV === "development") {
-  app.use(morgan("dev"));
-  console.log(`mode: ${process.env.USER_BACKEND_ENV}`);
+if (isDevEnv()) {
+  app.use(
+    morgan("dev", {
+      stream: {
+        write: (msg) => logger.debug(msg.trim()),
+      },
+    })
+  );
+  logger.info(`Dev request logging enabled (mode=${process.env.USER_BACKEND_ENV || process.env.NODE_ENV || "unknown"})`);
 }
 
 app.use("/api", globalLimiter);
@@ -47,14 +54,14 @@ app.use(globalError);
 
 const PORT = process.env.USER_BACKEND_PORT || 8002;
 const server = app.listen(PORT, () => {
-  console.log(`Application running on port ${PORT}`);
+  logger.info(`Application running on port ${PORT}`);
 });
 
 // Handle rejection outside express
 process.on("unhandledRejection", (err) => {
-  console.error(`UnhandledRejection Errors: ${err.name} | ${err.message}`);
+  logger.error(`UnhandledRejection Errors: ${err.name} | ${err.message}`);
   server.close(() => {
-    console.error(`Shutting down....`);
+    logger.error("Shutting down....");
     process.exit(1);
   });
 });

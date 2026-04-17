@@ -8,20 +8,22 @@ ENV_FILE = ROOT_DIR / ".env"
 
 class Settings(BaseSettings):
     # App Settings
-    APP_NAME: str = Field(default="Analytics Service")
-    LOG_LEVEL: str = Field(default="INFO")
+    ENV: str = Field(default="dev", validation_alias="ANALYTICS_BACKEND_ENV")
+    APP_NAME: str = Field(default="Analytics Service", validation_alias="ANALYTICS_BACKEND_APP_NAME")
+    LOG_LEVEL: str = Field(default="INFO", validation_alias="ANALYTICS_BACKEND_LOG_LEVEL")
+    BACKEND_PORT: int = Field(default=8003, validation_alias="ANALYTICS_BACKEND_PORT")
     
     # Database Settings
-    POSTGRES_URL: str
+    POSTGRES_URL: str = Field(..., validation_alias="ANALYTICS_BACKEND_POSTGRES_URL")
     
     # JWT Settings
-    JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str = "HS256"
+    JWT_SECRET_KEY: str = Field(..., validation_alias="ANALYTICS_BACKEND_JWT_SECRET_KEY")
+    JWT_ALGORITHM: str = Field(default="HS256", validation_alias="ANALYTICS_BACKEND_JWT_ALGORITHM")
     
     # Redis Settings
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_TTL_SECONDS: int = 60
+    REDIS_HOST: str = Field(default="localhost", validation_alias="ANALYTICS_BACKEND_REDIS_HOST")
+    REDIS_PORT: int = Field(default=6379, validation_alias="ANALYTICS_BACKEND_REDIS_PORT")
+    REDIS_TTL_SECONDS: int = Field(default=60, validation_alias="ANALYTICS_BACKEND_REDIS_TTL_SECONDS")
     
     # Configuration for loading from .env
     model_config = SettingsConfigDict(

@@ -1,4 +1,4 @@
-const { body, param } = require("express-validator");
+const { body } = require("express-validator");
 const validatorMiddleware = require("../../middleware/validatorMiddleware");
 const validator = require("validator");
 const User = require("../../models/userModel");
@@ -126,81 +126,8 @@ exports.registerValidator = [
     .withMessage("Zip/Postal code is required.")
     .custom((value, { req }) => {
       const country = req.body.country ? req.body.country.toUpperCase() : "any";
-      console.log("country", country);
       if (!validator.isPostalCode(value, country)) {
         throw new Error(`Invalid zip/postal code for ${country}.`);
-      }
-      return true;
-    }),
-
-  validatorMiddleware,
-];
-
-exports.verifyEmailValidator = [
-  param("token")
-    .notEmpty()
-    .withMessage("Verification token is required.")
-    .isHexadecimal()
-    .withMessage("Invalid token format.")
-    .isLength({ min: 64, max: 64 })
-    .withMessage("Invalid token length."),
-
-  validatorMiddleware,
-];
-
-exports.resendVerificationValidator = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .withMessage("Email address is required.")
-    .isEmail()
-    .withMessage("Please provide a valid email address.")
-    .normalizeEmail(),
-
-  validatorMiddleware,
-];
-
-exports.forgotPasswordValidator = [
-  body("email")
-    .trim()
-    .notEmpty()
-    .withMessage("Email address is required.")
-    .isEmail()
-    .withMessage("Invalid email format.")
-    .normalizeEmail(),
-
-  validatorMiddleware,
-];
-
-exports.resetPasswordValidator = [
-  param("token")
-    .notEmpty()
-    .withMessage("Reset token is required.")
-    .isHexadecimal()
-    .withMessage("Invalid token format.")
-    .isLength({ min: 64, max: 64 })
-    .withMessage("Invalid token length."),
-
-  body("password")
-    .notEmpty()
-    .withMessage("New password is required.")
-    .isStrongPassword({
-      minLength: 8,
-      minLowercase: 1,
-      minUppercase: 1,
-      minNumbers: 1,
-      minSymbols: 1,
-    })
-    .withMessage(
-      "Password must be 8+ chars with uppercase, lowercase, number, and symbol."
-    ),
-
-  body("passwordConfirm")
-    .notEmpty()
-    .withMessage("Password confirmation is required.")
-    .custom((val, { req }) => {
-      if (val !== req.body.password) {
-        throw new Error("Passwords do not match.");
       }
       return true;
     }),
@@ -293,65 +220,6 @@ exports.updateMeValidator = [
       const country = req.body.country ? req.body.country.toUpperCase() : "any";
       if (!validator.isPostalCode(value, country)) {
         throw new Error(`Invalid zip/postal code for ${country}.`);
-      }
-      return true;
-    }),
-
-  validatorMiddleware,
-];
-
-exports.requestEmailUpdateValidator = [
-  body("newEmail")
-    .notEmpty()
-    .withMessage("New email is required")
-    .isEmail()
-    .withMessage("Invalid email format")
-    .normalizeEmail(),
-
-  body("currentPassword")
-    .notEmpty()
-    .withMessage("Current password is required to verify your identity"),
-
-  validatorMiddleware,
-];
-
-exports.verifyEmailUpdateValidator = [
-  param("token")
-    .notEmpty()
-    .withMessage("Verification token is required.")
-    .isHexadecimal()
-    .withMessage("Invalid token format.")
-    .isLength({ min: 64, max: 64 })
-    .withMessage("Invalid token length."),
-
-  validatorMiddleware,
-];
-
-exports.updatePasswordValidator = [
-  body("currentPassword")
-    .notEmpty()
-    .withMessage("Current password is required."),
-
-  body("password")
-    .notEmpty()
-    .withMessage("New password is required.")
-    .isStrongPassword({
-      minLength: 8,
-      minLowercase: 1,
-      minUppercase: 1,
-      minNumbers: 1,
-      minSymbols: 1,
-    })
-    .withMessage(
-      "Password must be 8+ characters with uppercase, lowercase, number, and symbol."
-    ),
-
-  body("passwordConfirm")
-    .notEmpty()
-    .withMessage("Password confirmation is required.")
-    .custom((val, { req }) => {
-      if (val !== req.body.password) {
-        throw new Error("Passwords do not match.");
       }
       return true;
     }),

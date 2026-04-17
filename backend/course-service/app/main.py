@@ -5,18 +5,14 @@ from contextlib import asynccontextmanager
 import logging
 
 from .core.config import get_settings
+from .core.logging_config import setup_logging
 from .database import create_tables, engine
 from .api.v1 import courses, lessons, enrollments
 from .api.dependencies import get_database
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
 settings = get_settings()
+active_log_level = setup_logging(settings.env, settings.log_level)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,16 +20,16 @@ async def lifespan(app: FastAPI):
     Lifespan context manager for startup/shutdown events
     """
     # Startup
-    logger.info("Starting Course Service...")
-    logger.info(f"Database URL: {settings.database_url}")
-    logger.info(f"MinIO Endpoint: {settings.minio_endpoint}")
+    logger.info("Starting Course Service (env=%s, log_level=%s)", settings.env, active_log_level)
+    logger.info("Database URL: %s", settings.database_url)
+    logger.info("MinIO Endpoint: %s", settings.minio_endpoint)
     
     # Create tables if they don't exist
     try:
         create_tables()
         logger.info("Database tables created/verified")
     except Exception as e:
-        logger.error(f"Database initialization error: {e}")
+        logger.error("Database initialization error: %s", e)
         raise
     
     yield
@@ -92,7 +88,7 @@ app.include_router(
 # Error handlers
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.error("Unhandled exception: %s", exc, exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}
@@ -113,6 +109,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=settings.backend_port,
         reload=settings.debug
     )

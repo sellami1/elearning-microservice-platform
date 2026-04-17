@@ -1,0 +1,207 @@
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: user_service_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet \"mongodb://127.0.0.1:27017/admin\" --eval \"db.runCommand({ ping: 1 }).ok\" | grep 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - learning-platform
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8025 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - learning-platform
+
+  course-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: course_user
+      POSTGRES_PASSWORD: course_password
+      POSTGRES_DB: course_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - course_postgres_data:/var/lib/postgresql/data
+      - ./backend/course-service/app/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U course_user -d course_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - learning-platform
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - learning-platform
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - learning-platform
+
+  user-service:
+    build:
+      context: ./backend/user-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-dev}
+      USER_BACKEND_ENV: ${USER_BACKEND_ENV:-dev}
+      USER_BACKEND_PORT: ${USER_BACKEND_PORT:-8002}
+      USER_BACKEND_URL: ${USER_BACKEND_URL:-http://localhost:8002}
+      USER_BACKEND_PUBLIC_FRONTEND_URL: ${USER_BACKEND_PUBLIC_FRONTEND_URL:-http://localhost:3000}
+      USER_BACKEND_JWT_SECRET_KEY: ${USER_BACKEND_JWT_SECRET_KEY:-change_me_to_a_long_random_secret}
+      USER_BACKEND_JWT_EXPIRE_TIME: ${USER_BACKEND_JWT_EXPIRE_TIME:-1d}
+      USER_BACKEND_MONGODB_URI: ${USER_BACKEND_MONGODB_URI:-mongodb://mongodb:27017/user_service_db}
+      USER_BACKEND_APP_NAME: ${USER_BACKEND_APP_NAME:-E-learning User Service}
+      USER_BACKEND_EMAIL_HOST: ${USER_BACKEND_EMAIL_HOST:-mailhog}
+      USER_BACKEND_EMAIL_PORT: ${USER_BACKEND_EMAIL_PORT:-1025}
+      USER_BACKEND_EMAIL_SECURE: ${USER_BACKEND_EMAIL_SECURE:-false}
+      USER_BACKEND_EMAIL_FROM: ${USER_BACKEND_EMAIL_FROM:-no-reply@local.test}
+      USER_BACKEND_EMAIL_USER: ${USER_BACKEND_EMAIL_USER:-}
+      USER_BACKEND_EMAIL_PASSWORD: ${USER_BACKEND_EMAIL_PASSWORD:-}
+    ports:
+      - "${USER_BACKEND_PORT:-8002}:${USER_BACKEND_PORT:-8002}"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const net=require('net');const p=Number(process.env.USER_BACKEND_PORT||'8002');const s=net.connect(p,'127.0.0.1',()=>{s.end();process.exit(0);});s.on('error',()=>process.exit(1));s.setTimeout(5000,()=>{s.destroy();process.exit(1);});\""]
+      interval: 15s
+      timeout: 7s
+      retries: 6
+      start_period: 25s
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mailhog:
+        condition: service_healthy
+    networks:
+      - learning-platform
+
+  course-service:
+    build:
+      context: ./backend/course-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      COURSE_BACKEND_ENV: ${COURSE_BACKEND_ENV:-dev}
+      COURSE_BACKEND_LOG_LEVEL: ${COURSE_BACKEND_LOG_LEVEL:-DEBUG}
+      COURSE_BACKEND_PORT: ${COURSE_BACKEND_PORT:-8001}
+      COURSE_BACKEND_POSTGRES_URL: ${COURSE_BACKEND_POSTGRES_URL:-postgresql://course_user:course_password@course-postgres:5432/course_db}
+      COURSE_BACKEND_JWT_SECRET_KEY: ${COURSE_BACKEND_JWT_SECRET_KEY:-change-me-course-secret}
+      COURSE_BACKEND_JWT_ALGORITHM: ${COURSE_BACKEND_JWT_ALGORITHM:-HS256}
+      COURSE_BACKEND_ACCESS_TOKEN_EXPIRE_MINUTES: ${COURSE_BACKEND_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      COURSE_BACKEND_MINIO_ENDPOINT: ${COURSE_BACKEND_MINIO_ENDPOINT:-minio:9000}
+      COURSE_BACKEND_MINIO_ACCESS_KEY: ${COURSE_BACKEND_MINIO_ACCESS_KEY:-minioadmin}
+      COURSE_BACKEND_MINIO_SECRET_KEY: ${COURSE_BACKEND_MINIO_SECRET_KEY:-minioadmin}
+      COURSE_BACKEND_MINIO_BUCKET_NAME: ${COURSE_BACKEND_MINIO_BUCKET_NAME:-courses-media}
+      COURSE_BACKEND_MINIO_SECURE: ${COURSE_BACKEND_MINIO_SECURE:-False}
+      COURSE_BACKEND_APP_NAME: ${COURSE_BACKEND_APP_NAME:-Course Service}
+      COURSE_BACKEND_APP_VERSION: ${COURSE_BACKEND_APP_VERSION:-1.0.0}
+      COURSE_BACKEND_DEBUG: ${COURSE_BACKEND_DEBUG:-True}
+    ports:
+      - "${COURSE_BACKEND_PORT:-8001}:${COURSE_BACKEND_PORT:-8001}"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,urllib.request,sys;p=os.getenv('COURSE_BACKEND_PORT','8001');url=f'http://127.0.0.1:{p}/health';sys.exit(0 if urllib.request.urlopen(url, timeout=5).getcode()==200 else 1)\""]
+      interval: 15s
+      timeout: 7s
+      retries: 6
+      start_period: 25s
+    depends_on:
+      course-postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - learning-platform
+
+  analytics-service:
+    build:
+      context: ./backend/analytics-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ANALYTICS_BACKEND_ENV: ${ANALYTICS_BACKEND_ENV:-dev}
+      ANALYTICS_BACKEND_PORT: ${ANALYTICS_BACKEND_PORT:-8003}
+      ANALYTICS_BACKEND_POSTGRES_URL: ${ANALYTICS_BACKEND_POSTGRES_URL:-postgresql://course_user:course_password@course-postgres:5432/course_db}
+      ANALYTICS_BACKEND_JWT_SECRET_KEY: ${ANALYTICS_BACKEND_JWT_SECRET_KEY:-change-me-analytics-secret}
+      ANALYTICS_BACKEND_JWT_ALGORITHM: ${ANALYTICS_BACKEND_JWT_ALGORITHM:-HS256}
+      ANALYTICS_BACKEND_REDIS_HOST: ${ANALYTICS_BACKEND_REDIS_HOST:-redis}
+      ANALYTICS_BACKEND_REDIS_PORT: ${ANALYTICS_BACKEND_REDIS_PORT:-6379}
+      ANALYTICS_BACKEND_REDIS_TTL_SECONDS: ${ANALYTICS_BACKEND_REDIS_TTL_SECONDS:-60}
+      ANALYTICS_BACKEND_APP_NAME: ${ANALYTICS_BACKEND_APP_NAME:-Analytics Service}
+      ANALYTICS_BACKEND_LOG_LEVEL: ${ANALYTICS_BACKEND_LOG_LEVEL:-DEBUG}
+    ports:
+      - "${ANALYTICS_BACKEND_PORT:-8003}:${ANALYTICS_BACKEND_PORT:-8003}"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,urllib.request,sys;p=os.getenv('ANALYTICS_BACKEND_PORT','8003');url=f'http://127.0.0.1:{p}/health';sys.exit(0 if urllib.request.urlopen(url, timeout=5).getcode()==200 else 1)\""]
+      interval: 15s
+      timeout: 7s
+      retries: 6
+      start_period: 25s
+    depends_on:
+      course-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - learning-platform
+
+volumes:
+  mongodb_data:
+  course_postgres_data:
+  minio_data:
+  redis_data:
+
+networks:
+  learning-platform:
+    driver: bridge

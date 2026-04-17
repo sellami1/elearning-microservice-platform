@@ -1,5 +1,10 @@
 const ApiError = require("../utils/apiError");
 
+const isDevMode = () => {
+  const nodeEnv = (process.env.NODE_ENV || "").toLowerCase();
+  return nodeEnv === "dev" || nodeEnv === "development";
+};
+
 const sendErrorForDev = (err, res) =>
   res.status(err.statusCode).json({
     status: err.status,
@@ -32,7 +37,7 @@ const globalError = (err, req, res, next) => {
   }
   if (err.name === "JsonWebTokenError") err = handleJwtInvalidSignature();
   if (err.name === "TokenExpiredError") err = handleJwtExpired();
-  if (process.env.NODE_ENV === "development") {
+  if (isDevMode()) {
     sendErrorForDev(err, res);
   } else {
     sendErrorForProd(err, res);

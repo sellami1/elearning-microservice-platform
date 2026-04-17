@@ -8,6 +8,7 @@ from .models.analytics import SCHEMA_NAME
 from fastapi.middleware.cors import CORSMiddleware
 from .cors import GranularCORSMiddleware
 from .core.logging_config import setup_logging
+from .core.config import settings
 
 # Initialize logging
 setup_logging()
@@ -21,10 +22,12 @@ with engine.connect() as connection:
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Analytics Service",
+    title=settings.APP_NAME,
     description="Microservice for tracking course views and enrollments",
     version="1.0.0"
 )
+
+logger.info("Analytics service boot complete (env=%s, port=%s)", settings.ENV, settings.BACKEND_PORT)
 
 # --- CORS MIDDLEWARES ---
 app.add_middleware(GranularCORSMiddleware)
@@ -43,3 +46,13 @@ def read_root(current_user: dict = Depends(get_current_user)):
         "message": "Welcome to the Analytics Service",
         "decoded_token": current_user
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=settings.BACKEND_PORT,
+    )

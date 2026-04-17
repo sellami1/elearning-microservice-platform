@@ -29,16 +29,3 @@ exports.authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-/**
- * @desc    Very Strict Limiter for Email/Reset actions
- * @limit   3 requests per hour
- */
-exports.forgotPasswordLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3,
-  handler: (req, res, next) => {
-    next(new ApiError('Too many reset/verification requests. Please try again in an hour', 429));
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});

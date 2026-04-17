@@ -22,16 +22,11 @@ exports.protect = asyncHandler(async (req, res, next) => {
       )
     );
 
-  const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+  const decoded = jwt.verify(token, process.env.USER_BACKEND_JWT_SECRET_KEY);
   const currentUser = await User.findById(decoded.userId);
   if (!currentUser)
     return next(
       new ApiError("The user belonging to this token no longer exists.", 401)
-    );
-
-  if (!currentUser.isVerified)
-    return next(
-      new ApiError("Please verify your account to access this route.", 403)
     );
 
   if (currentUser.passwordChangedAt) {

@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.venv
+venv
+.git
+.github
+.env
+Dockerfile
+docker-compose.yml
+README.md
+reproduce_issue.py

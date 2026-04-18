@@ -51,7 +51,7 @@
 ## Courses API
 Base path: `/api/v1/courses`
 
-### GET /
+### GET /api/v1/courses/
 - Auth: Optional (`Bearer` can change visibility rules)
 - Query params:
   - `skip` int >= 0 (default `0`)
@@ -94,7 +94,7 @@ Base path: `/api/v1/courses`
 }
 ```
 
-### GET /{course_id}
+### GET /api/v1/courses/{course_id}
 - Auth: Optional
 - Path params:
   - `course_id` UUID
@@ -102,7 +102,7 @@ Base path: `/api/v1/courses`
 - Errors:
   - `404 {"detail":"Course not found"}`
 
-### POST /
+### POST /api/v1/courses/
 - Auth: Required role `instructor`
 - Content-Type: `multipart/form-data`
 - Form fields:
@@ -122,7 +122,7 @@ Base path: `/api/v1/courses`
   - `422` validation/value errors
   - `500 {"detail":"Course creation failed: ..."}`
 
-### PUT /{course_id}
+### PUT /api/v1/courses/{course_id}
 - Auth: Required role `instructor`
 - Content-Type: `multipart/form-data`
 - Form fields: same set as create, all optional
@@ -156,14 +156,14 @@ Base path: `/api/v1/courses`
   - `404 {"detail":"Course not found"}`
   - `422` validation/value errors
 
-### DELETE /{course_id}
+### DELETE /api/v1/courses/{course_id}
 - Auth: Required role `instructor`
 - Response 204: no body
 - Errors:
   - `403 {"detail":"Not authorized to delete this course"}`
   - `404 {"detail":"Course not found"}`
 
-### GET /instructor/mine
+### GET /api/v1/courses/instructor/mine
 - Auth: Required role `instructor`
 - Query params:
   - `published` bool (optional)
@@ -196,7 +196,7 @@ Base path: `/api/v1/courses`
 ## Lessons API
 Base path: `/api/v1/lessons`
 
-### GET /course/{course_id}
+### GET /api/v1/lessons/course/{course_id}
 - Auth: Optional
 - Query params: `skip`, `limit`
 - Response 200:
@@ -227,7 +227,7 @@ Base path: `/api/v1/lessons`
 - Errors:
   - `404` course not found / not visible
 
-### POST /
+### POST /api/v1/lessons/
 - Auth: Required role `instructor`
 - Content-Type: `multipart/form-data`
 - Required form fields:
@@ -241,13 +241,13 @@ Base path: `/api/v1/lessons`
   - `404` course not found
   - `422` validation/value errors
 
-### GET /{lesson_id}
+### GET /api/v1/lessons/{lesson_id}
 - Auth: Optional
 - Response 200: `LessonResponse`
 - Errors:
   - `404` lesson not found / not visible
 
-### PUT /{lesson_id}
+### PUT /api/v1/lessons/{lesson_id}
 - Auth: Required role `instructor`
 - Content-Type: `multipart/form-data`
 - Form fields: all optional (`title`, `description`, `content_type`, `content_url`, `duration_minutes`, `order_index`, `is_preview`, `is_published`, `content_file`)
@@ -256,7 +256,7 @@ Base path: `/api/v1/lessons`
   - `403` not owner/admin
   - `404` lesson not found
 
-### DELETE /{lesson_id}
+### DELETE /api/v1/lessons/{lesson_id}
 - Auth: Required role `instructor`
 - Response 204: no body
 - Errors:
@@ -266,7 +266,7 @@ Base path: `/api/v1/lessons`
 ## Enrollments API
 Base path: `/api/v1/enrollments`
 
-### POST /
+### POST /api/v1/enrollments/
 - Auth: Required role `learner`
 - Request body:
 ```json
@@ -293,7 +293,7 @@ Base path: `/api/v1/enrollments`
   - `403 {"detail":"Course is not published"}`
   - `404 {"detail":"Course not found"}`
 
-### GET /me
+### GET /api/v1/enrollments/me
 - Auth: Required role `learner`
 - Query params: `skip`, `limit`, `completed`, `search`
 - Response 200:
@@ -332,7 +332,7 @@ Base path: `/api/v1/enrollments`
 }
 ```
 
-### GET /course/{course_id}/enrollments
+### GET /api/v1/enrollments/course/{course_id}/enrollments
 - Auth: Required role `instructor`
 - Query params: `skip`, `limit`
 - Response 200:
@@ -359,7 +359,7 @@ Base path: `/api/v1/enrollments`
 }
 ```
 
-### GET /instructor
+### GET /api/v1/enrollments/instructor
 - Auth: Required role `instructor`
 - Query params: `skip`, `limit`
 - Response 200:

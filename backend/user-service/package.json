@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon ./src/server.js",
     "prod": "cross-env USER_BACKEND_ENV=production node ./src/server.js",
-    "test": "jest --watchAll --no-cache --runInBand"
+    "test": "jest --watchAll --no-cache --runInBand",
+    "docs": "node ./src/server.js"
   },
   "author": "",
   "license": "ISC",
@@ -24,7 +25,9 @@
     "express-xss-sanitizer": "^1.1.8",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.20.0",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "jest": "^30.2.0",

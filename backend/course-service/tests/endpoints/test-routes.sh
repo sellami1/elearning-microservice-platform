@@ -10,7 +10,7 @@ API_PREFIX="/api/v1"
 TIMEOUT="${TIMEOUT:-15}"
 
 # JWT secret used by course-service (docker-compose default compatible).
-JWT_SECRET="${COURSE_BACKEND_JWT_SECRET_KEY:-change-me-course-secret}"
+JWT_SECRET="${COURSE_BACKEND_JWT_SECRET_KEY:-change-me-shared-jwt-secret}"
 
 # Deterministic test users (24-char ObjectId-like strings)
 INSTRUCTOR_ID="${INSTRUCTOR_ID:-507f1f77bcf86cd799439011}"

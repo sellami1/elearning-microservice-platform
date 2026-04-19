@@ -23,6 +23,82 @@
 - JSON endpoints: `application/json`
 - File upload endpoints: `multipart/form-data`
 
+## Interactive API Summary
+
+Use this section to quickly scan endpoints by area, method, auth, and role, then jump to full details below.
+
+### Quick Jump
+- [Base Utility Endpoints](#base-utility-endpoints)
+- [Courses API](#courses-api)
+- [Lessons API](#lessons-api)
+- [Enrollments API](#enrollments-api)
+- [Common Error Contract](#common-error-contract)
+
+### Endpoint Matrix
+
+| Area | Method | Path | Auth | Role | Request Type | Success |
+|---|---|---|---|---|---|---|
+| Utility | GET | `/health` | Public | Any | JSON | `200` |
+| Utility | GET | `/` | Public | Any | JSON | `200` |
+| Courses | GET | `/api/v1/courses/` | Optional | Any | Query params | `200` |
+| Courses | GET | `/api/v1/courses/{course_id}` | Optional | Any | Path param | `200` |
+| Courses | POST | `/api/v1/courses/` | Required | `instructor` | `multipart/form-data` | `201` |
+| Courses | PUT | `/api/v1/courses/{course_id}` | Required | `instructor` | `multipart/form-data` | `200` |
+| Courses | DELETE | `/api/v1/courses/{course_id}` | Required | `instructor` | Path param | `204` |
+| Courses | GET | `/api/v1/courses/instructor/mine` | Required | `instructor` | Query params | `200` |
+| Lessons | GET | `/api/v1/lessons/course/{course_id}` | Optional | Any | Path + query params | `200` |
+| Lessons | POST | `/api/v1/lessons/` | Required | `instructor` | `multipart/form-data` | `201` |
+| Lessons | GET | `/api/v1/lessons/{lesson_id}` | Optional | Any | Path param | `200` |
+| Lessons | PUT | `/api/v1/lessons/{lesson_id}` | Required | `instructor` | `multipart/form-data` | `200` |
+| Lessons | DELETE | `/api/v1/lessons/{lesson_id}` | Required | `instructor` | Path param | `204` |
+| Enrollments | POST | `/api/v1/enrollments/` | Required | `learner` | JSON body | `201` |
+| Enrollments | GET | `/api/v1/enrollments/me` | Required | `learner` | Query params | `200` |
+| Enrollments | GET | `/api/v1/enrollments/course/{course_id}/enrollments` | Required | `instructor` | Path + query params | `200` |
+| Enrollments | GET | `/api/v1/enrollments/instructor` | Required | `instructor` | Query params | `200` |
+
+### Role Filters
+
+<details>
+<summary>Instructor endpoints</summary>
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/v1/courses/` | Create course |
+| PUT | `/api/v1/courses/{course_id}` | Update owned course |
+| DELETE | `/api/v1/courses/{course_id}` | Delete owned course |
+| GET | `/api/v1/courses/instructor/mine` | List own courses |
+| POST | `/api/v1/lessons/` | Create lesson in owned course |
+| PUT | `/api/v1/lessons/{lesson_id}` | Update lesson in owned course |
+| DELETE | `/api/v1/lessons/{lesson_id}` | Delete lesson in owned course |
+| GET | `/api/v1/enrollments/course/{course_id}/enrollments` | View enrollments for one course |
+| GET | `/api/v1/enrollments/instructor` | View enrollments across instructor courses |
+
+</details>
+
+<details>
+<summary>Learner endpoints</summary>
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/v1/enrollments/` | Enroll in a published course |
+| GET | `/api/v1/enrollments/me` | View own enrollments and stats |
+
+</details>
+
+<details>
+<summary>Public or optional-auth endpoints</summary>
+
+| Method | Path | Visibility |
+|---|---|---|
+| GET | `/health` | Public |
+| GET | `/` | Public |
+| GET | `/api/v1/courses/` | Public list, with optional Bearer behavior |
+| GET | `/api/v1/courses/{course_id}` | Public/optional-auth |
+| GET | `/api/v1/lessons/course/{course_id}` | Public/optional-auth (visibility rules apply) |
+| GET | `/api/v1/lessons/{lesson_id}` | Public/optional-auth (visibility rules apply) |
+
+</details>
+
 ## Base Utility Endpoints
 
 ### GET /health

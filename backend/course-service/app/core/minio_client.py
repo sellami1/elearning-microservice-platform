@@ -119,9 +119,14 @@ class MinIOClient:
             )
             
             # Generate URL
-            protocol = "https" if settings.minio_secure else "http"
-            new_url = f"{protocol}://{settings.minio_endpoint}/{self.bucket_name}/{object_name}"
-            
+            if settings.minio_public_url:
+                # Use public URL (e.g., http://localhost/media)
+                new_url = f"{settings.minio_public_url}/{object_name}"
+            else:
+                # Fallback to internal endpoint with protocol
+                protocol = "https" if settings.minio_secure else "http"
+                new_url = f"{protocol}://{settings.minio_endpoint}/{self.bucket_name}/{object_name}"
+
             return new_url, old_object_name
             
         except S3Error as e:
@@ -158,7 +163,14 @@ class MinIOClient:
                 content_type=file.content_type or "application/octet-stream"
             )
             
-            url = f"http://{settings.minio_endpoint}/{self.bucket_name}/{object_name}"
+            # Generate URL
+            if settings.minio_public_url:
+                # Use public URL (e.g., http://localhost/media)
+                url = f"{settings.minio_public_url}/{object_name}"
+            else:
+                # Fallback to internal endpoint with protocol
+                protocol = "https" if settings.minio_secure else "http"
+                url = f"{protocol}://{settings.minio_endpoint}/{self.bucket_name}/{object_name}"
             return url
             
         except S3Error as e:

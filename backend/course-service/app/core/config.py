@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     
     # MinIO
     minio_endpoint: str = Field(..., validation_alias="COURSE_BACKEND_MINIO_ENDPOINT")
+    minio_public_url: str = Field(default="", validation_alias="COURSE_BACKEND_MINIO_PUBLIC_URL")
     minio_access_key: str = Field(..., validation_alias="COURSE_BACKEND_MINIO_ACCESS_KEY")
     minio_secret_key: str = Field(..., validation_alias="COURSE_BACKEND_MINIO_SECRET_KEY")
     minio_bucket_name: str = Field(default="courses-media", validation_alias="COURSE_BACKEND_MINIO_BUCKET_NAME")

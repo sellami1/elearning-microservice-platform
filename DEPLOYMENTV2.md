@@ -7,212 +7,205 @@
 Create `@/home/kadhem/devops-m1/projet-integration/code-base/elearning-microservice-platform-backend/gateway/nginx.conf`:
 
 ```nginx
-upstream user_service {
-    server user-service:8002;
+events {
+    worker_connections 1024;
 }
 
-upstream course_service {
-    server course-service:8001;
-}
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
 
-upstream analytics_service {
-    server analytics-service:8003;
-}
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
 
-upstream minio_s3 {
-    server minio:9000;
-}
+    access_log  /var/log/nginx/access.log  main;
+    error_log   /var/log/nginx/error.log;
 
-upstream minio_console {
-    server minio:9001;
-}
+    sendfile        on;
+    keepalive_timeout  65;
 
-# Rate limiting zones
-limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
-limit_req_zone $binary_remote_addr zone=upload:10m rate=5r/m;
-
-server {
-    listen 80;
-    server_name localhost;
-
-    # Logging
-    access_log /var/log/nginx/access.log;
-    error_log /var/log/nginx/error.log;
-
-    # Client max body size for file uploads (100MB)
-    client_max_body_size 100M;
-
-    # CORS headers for all responses
-    add_header 'Access-Control-Allow-Origin' '*' always;
-    add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
-    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-
-    # Handle OPTIONS preflight
-    if ($request_method = 'OPTIONS') {
-        return 204;
+    upstream user_service {
+        server user-service:8002;
     }
 
-    # ========== USER SERVICE ==========
-    location /api/v1/users {
-        limit_req zone=api burst=20 nodelay;
-        
-        proxy_pass http://user_service;
-        proxy_http_version 1.1;
-        
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+    upstream course_service {
+        server course-service:8001;
     }
 
-    # ========== COURSE SERVICE ==========
-    location /api/v1/courses {
-        limit_req zone=api burst=20 nodelay;
-        
-        proxy_pass http://course_service;
-        proxy_http_version 1.1;
-        
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+    upstream analytics_service {
+        server analytics-service:8003;
     }
 
-    location /api/v1/lessons {
-        limit_req zone=api burst=20 nodelay;
-        
-        proxy_pass http://course_service;
-        proxy_http_version 1.1;
-        
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+    upstream minio_s3 {
+        server minio:9000;
     }
 
-    location /api/v1/enrollments {
-        limit_req zone=api burst=20 nodelay;
-        
-        proxy_pass http://course_service;
-        proxy_http_version 1.1;
-        
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+    upstream minio_console {
+        server minio:9001;
     }
 
-    # ========== ANALYTICS SERVICE ==========
-    location /api/v1/analytics {
-        limit_req zone=api burst=20 nodelay;
-        
-        proxy_pass http://analytics_service;
-        proxy_http_version 1.1;
-        
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
+    # Rate limiting zones
+    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=upload:10m rate=5r/m;
 
-    # ========== HEALTH CHECKS ==========
-    location /health/users {
-        proxy_pass http://user_service/;
-        proxy_set_header Host $host;
-    }
+    server {
+        listen 80;
+        server_name localhost;
 
-    location /health/courses {
-        proxy_pass http://course_service/health;
-        proxy_set_header Host $host;
-    }
+        # Client max body size for file uploads (100MB)
+        client_max_body_size 100M;
 
-    location /health/analytics {
-        proxy_pass http://analytics_service/health;
-        proxy_set_header Host $host;
-    }
+        # ========== USER SERVICE ==========
+        location /api/v1/users {
+            limit_req zone=api burst=20 nodelay;
+            
+            proxy_pass http://user_service;
+            proxy_http_version 1.1;
+            
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # Timeouts
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
 
-    # ========== MINIO S3 API ==========
-    location /media/ {
-        # Higher limits for file operations
-        limit_req zone=upload burst=5 nodelay;
-        
-        proxy_pass http://minio_s3/;
-        rewrite ^/media/(.*) /courses-media/$1 break;
-        
-        proxy_http_version 1.1;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # WebSocket support (for console)
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        
-        # Disable buffering for large files
-        proxy_buffering off;
-        proxy_request_buffering off;
-        
-        # Timeouts for large uploads
-        proxy_connect_timeout 300s;
-        proxy_send_timeout 300s;
-        proxy_read_timeout 300s;
-        
-        # Cache static content
-        location ~* \.(jpg|jpeg|png|gif|ico|css|js|mp4|webm|pdf)$ {
-            expires 1d;
-            add_header Cache-Control "public, immutable";
+        # ========== COURSE SERVICE ==========
+        location /api/v1/courses {
+            limit_req zone=api burst=20 nodelay;
+            
+            proxy_pass http://course_service;
+            proxy_http_version 1.1;
+            
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        location /api/v1/lessons {
+            limit_req zone=api burst=20 nodelay;
+            
+            proxy_pass http://course_service;
+            proxy_http_version 1.1;
+            
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        location /api/v1/enrollments {
+            limit_req zone=api burst=20 nodelay;
+            
+            proxy_pass http://course_service;
+            proxy_http_version 1.1;
+            
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        # ========== ANALYTICS SERVICE ==========
+        location /api/v1/analytics {
+            limit_req zone=api burst=20 nodelay;
+            
+            proxy_pass http://analytics_service;
+            proxy_http_version 1.1;
+            
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        # ========== HEALTH CHECKS ==========
+        location /health/users {
+            proxy_pass http://user_service/;
+            proxy_set_header Host $host;
+        }
+
+        location /health/courses {
+            proxy_pass http://course_service/health;
+            proxy_set_header Host $host;
+        }
+
+        location /health/analytics {
+            proxy_pass http://analytics_service/health;
+            proxy_set_header Host $host;
+        }
+
+        # ========== MINIO S3 API ==========
+        location /media/ {
+            # Higher limits for file operations
+            limit_req zone=upload burst=5 nodelay;
+            
+            proxy_pass http://minio_s3/;
+            rewrite ^/media/(.*) /courses-media/$1 break;
+            
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # WebSocket support (for console)
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            
+            # Disable buffering for large files
+            proxy_buffering off;
+            proxy_request_buffering off;
+            
+            # Timeouts for large uploads
+            proxy_connect_timeout 300s;
+            proxy_send_timeout 300s;
+            proxy_read_timeout 300s;
+        }
+
+        # ========== MINIO CONSOLE ==========
+        location /minio/ {
+            proxy_pass http://minio_console/;
+            rewrite ^/minio/(.*) /$1 break;
+            
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-NginX-Proxy true;
+            
+            # WebSocket support for console
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            
+            # Real-time updates
+            proxy_buffering off;
         }
     }
-
-    # ========== MINIO CONSOLE ==========
-    location /minio/ {
-        proxy_pass http://minio_console/;
-        rewrite ^/minio/(.*) /$1 break;
-        
-        proxy_http_version 1.1;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-NginX-Proxy true;
-        
-        # WebSocket support for console
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        
-        # Real-time updates
-        proxy_buffering off;
-    }
-
-    # ========== FRONTEND (Optional - if serving static build) ==========
-    # Uncomment if you want nginx to serve built frontend
-    # location / {
-    #     root /usr/share/nginx/html;
-    #     try_files $uri $uri/ /index.html;
-    # }
 }
+
 ```
 
 ### 2. Add Gateway Service to Docker Compose

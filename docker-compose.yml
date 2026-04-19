@@ -17,21 +17,6 @@ services:
     networks:
       - learning-platform
 
-  mailhog:
-    image: mailhog/mailhog:latest
-    restart: unless-stopped
-    ports:
-      - "1025:1025"
-      - "8025:8025"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8025 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-    networks:
-      - learning-platform
-
   course-postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -105,7 +90,6 @@ services:
       USER_BACKEND_JWT_EXPIRE_TIME: ${USER_BACKEND_JWT_EXPIRE_TIME:-1d}
       USER_BACKEND_MONGODB_URI: ${USER_BACKEND_MONGODB_URI:-mongodb://mongodb:27017/user_service_db}
       USER_BACKEND_APP_NAME: ${USER_BACKEND_APP_NAME:-E-learning User Service}
-      USER_BACKEND_EMAIL_HOST: ${USER_BACKEND_EMAIL_HOST:-mailhog}
       USER_BACKEND_EMAIL_PORT: ${USER_BACKEND_EMAIL_PORT:-1025}
       USER_BACKEND_EMAIL_SECURE: ${USER_BACKEND_EMAIL_SECURE:-false}
       USER_BACKEND_EMAIL_FROM: ${USER_BACKEND_EMAIL_FROM:-no-reply@local.test}
@@ -121,8 +105,6 @@ services:
       start_period: 25s
     depends_on:
       mongodb:
-        condition: service_healthy
-      mailhog:
         condition: service_healthy
     networks:
       - learning-platform
@@ -141,6 +123,7 @@ services:
       COURSE_BACKEND_JWT_ALGORITHM: ${COURSE_BACKEND_JWT_ALGORITHM:-HS256}
       COURSE_BACKEND_ACCESS_TOKEN_EXPIRE_MINUTES: ${COURSE_BACKEND_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       COURSE_BACKEND_MINIO_ENDPOINT: ${COURSE_BACKEND_MINIO_ENDPOINT:-minio:9000}
+      COURSE_BACKEND_MINIO_PUBLIC_URL: ${COURSE_BACKEND_MINIO_PUBLIC_URL:-http://localhost/media}
       COURSE_BACKEND_MINIO_ACCESS_KEY: ${COURSE_BACKEND_MINIO_ACCESS_KEY:-minioadmin}
       COURSE_BACKEND_MINIO_SECRET_KEY: ${COURSE_BACKEND_MINIO_SECRET_KEY:-minioadmin}
       COURSE_BACKEND_MINIO_BUCKET_NAME: ${COURSE_BACKEND_MINIO_BUCKET_NAME:-courses-media}
@@ -192,6 +175,25 @@ services:
       course-postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+    networks:
+      - learning-platform
+
+  gateway:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      user-service:
+        condition: service_healthy
+      course-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     networks:
       - learning-platform

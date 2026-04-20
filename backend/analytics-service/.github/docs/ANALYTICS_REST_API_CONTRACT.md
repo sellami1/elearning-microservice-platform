@@ -19,6 +19,57 @@
 - Request: `application/json`
 - Response: `application/json`
 
+## Interactive API Summary
+
+Use this section to quickly scan analytics endpoints by method, auth, and purpose, then jump to full details below.
+
+### Quick Jump
+- [Endpoints](#endpoints)
+- [Common Error Contract](#common-error-contract)
+
+### Endpoint Matrix
+
+| Area | Method | Path | Auth | Role | Request Type | Success |
+|---|---|---|---|---|---|---|
+| Utility | GET | `/health` | Public | Any | JSON | `200` |
+| Utility | GET | `/` | Required | `learner` or `instructor` | JSON | `200` |
+| Events | POST | `/events/view` | Required | `learner` or `instructor` | JSON body | `201` |
+| Events | POST | `/events/enroll` | Required | `learner` or `instructor` | JSON body | `201` |
+| Metrics | GET | `/metrics/course/{course_id}` | Required | `learner` or `instructor` | Path param | `200` |
+| Metrics | GET | `/metrics/top-courses` | Required | `learner` or `instructor` | Query param (`limit`) | `200` |
+
+### Quick Filters
+
+<details>
+<summary>Event ingestion endpoints</summary>
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/events/view` | Record a course view event |
+| POST | `/events/enroll` | Record a course enrollment event |
+
+</details>
+
+<details>
+<summary>Metrics read endpoints</summary>
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/metrics/course/{course_id}` | Daily views and enrollments for one course |
+| GET | `/metrics/top-courses` | Top courses by views/enrollments |
+
+</details>
+
+<details>
+<summary>Public vs authenticated</summary>
+
+| Visibility | Endpoints |
+|---|---|
+| Public | `GET /health` |
+| Authenticated | `GET /`, `POST /events/view`, `POST /events/enroll`, `GET /metrics/course/{course_id}`, `GET /metrics/top-courses` |
+
+</details>
+
 ## Endpoints
 
 ### GET /health

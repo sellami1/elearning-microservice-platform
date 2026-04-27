@@ -181,6 +181,25 @@ services:
     networks:
       - learning-platform
 
+  frontend:
+    build:
+      context: ../elearning-microservice-platform-frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${FRONTEND_NODE_ENV:-production}
+      NEXT_PUBLIC_API_URL: ${FRONTEND_API_URL:-http://localhost}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const net=require('net');const s=net.connect(3000,'127.0.0.1',()=>{s.end();process.exit(0);});s.on('error',()=>process.exit(1));s.setTimeout(5000,()=>{s.destroy();process.exit(1);});\""]
+      interval: 15s
+      timeout: 7s
+      retries: 6
+      start_period: 30s
+    networks:
+      - learning-platform
+
   gateway:
     image: nginx:alpine
     restart: unless-stopped
@@ -196,6 +215,8 @@ services:
       analytics-service:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      frontend:
         condition: service_healthy
     networks:
       - learning-platform

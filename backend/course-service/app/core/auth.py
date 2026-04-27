@@ -44,11 +44,21 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     token = credentials.credentials
     return decode_jwt(token)
 
+
+def get_current_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    return credentials.credentials
+
 security_optional = HTTPBearer(auto_error=False)
 
 def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional)):
     if credentials:
         return decode_jwt(credentials.credentials)
+    return None
+
+
+def get_current_token_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional)):
+    if credentials:
+        return credentials.credentials
     return None
 
 def require_role(allowed_roles: list[str]):

@@ -10,8 +10,9 @@ from ...schemas.course import (
     CourseBase, CourseUpdateForm, CourseResponse, 
     CourseListResponse, CourseLevel, CourseCreateForm, CourseUpdateResponse
 )
-from ...core.auth import get_current_user, get_current_instructor, get_current_user_optional
+from ...core.auth import get_current_user, get_current_instructor, get_current_user_optional, get_current_token_optional
 from ...core.minio_client import minio_client
+from ...services.analytics import record_course_view
 
 router = APIRouter()
 
@@ -96,6 +97,7 @@ def get_course(
     course_id: uuid.UUID = Path(...),
     db: Session = Depends(get_db),
     current_user: Optional[dict] = Depends(get_current_user_optional),
+    access_token: Optional[str] = Depends(get_current_token_optional),
 ):
     """
     Get course by ID
@@ -115,6 +117,9 @@ def get_course(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Course not found"
         )
+
+    if access_token:
+        record_course_view(course_id, access_token)
     
     return db_course
 

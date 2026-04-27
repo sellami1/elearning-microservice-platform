@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     minio_secret_key: str = Field(..., validation_alias="COURSE_BACKEND_MINIO_SECRET_KEY")
     minio_bucket_name: str = Field(default="courses-media", validation_alias="COURSE_BACKEND_MINIO_BUCKET_NAME")
     minio_secure: bool = Field(default=False, validation_alias="COURSE_BACKEND_MINIO_SECURE")
+
+    # Analytics
+    analytics_service_url: str = Field(default="http://localhost:8003", validation_alias="COURSE_BACKEND_ANALYTICS_URL")
+    analytics_request_timeout_seconds: float = Field(default=2.0, validation_alias="COURSE_BACKEND_ANALYTICS_REQUEST_TIMEOUT_SECONDS")
     
     # CORS
     cors_origins: list = ["*"]

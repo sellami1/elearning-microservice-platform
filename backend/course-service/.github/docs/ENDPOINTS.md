@@ -13,7 +13,7 @@ Base URL: `http://localhost:8000`
 | Method | Path | Auth | Role | Description |
 |--------|------|------|------|-------------|
 | GET | /api/v1/courses | Optional | Any | Lists courses with role-aware visibility and filters. |
-| GET | /api/v1/courses/{course_id} | Optional | Any | Gets one course; unpublished courses are hidden from non-owners. |
+| GET | /api/v1/courses/{course_id} | Optional | Any | Gets one course; unpublished courses are hidden from non-owners and authenticated views are forwarded to analytics. |
 | POST | /api/v1/courses | Yes | instructor | Creates a course (multipart form, optional thumbnail upload). |
 | PUT | /api/v1/courses/{course_id} | Yes | instructor | Updates owned course (multipart form, optional thumbnail upload). |
 | DELETE | /api/v1/courses/{course_id} | Yes | instructor | Deletes owned course and associated media files. |
@@ -23,7 +23,7 @@ Base URL: `http://localhost:8000`
 | GET | /api/v1/lessons/{lesson_id} | Optional | Any | Gets lesson details with publish/access restrictions. |
 | PUT | /api/v1/lessons/{lesson_id} | Yes | instructor | Updates lesson and optionally replaces content file/url. |
 | DELETE | /api/v1/lessons/{lesson_id} | Yes | instructor | Deletes lesson and its stored content. |
-| POST | /api/v1/enrollments | Yes | learner | Enrolls current learner in a course. |
+| POST | /api/v1/enrollments | Yes | learner | Enrolls current learner in a course and records an analytics enroll event. |
 | GET | /api/v1/enrollments/me | Yes | learner | Lists current learner enrollments with stats. |
 | GET | /api/v1/enrollments/course/{course_id}/enrollments | Yes | instructor | Lists enrollments for one owned course. |
 | GET | /api/v1/enrollments/instructor | Yes | instructor | Lists enrollments across instructor-owned courses. |

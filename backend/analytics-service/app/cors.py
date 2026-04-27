@@ -14,10 +14,10 @@ class GranularCORSMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             from fastapi.responses import Response
             response = Response()
-            if path.startswith("/metrics"):
+            if path.startswith("/api/v1/analytics/metrics") or path.startswith("/metrics"):
                 response.headers["Access-Control-Allow-Origin"] = "*"
                 response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-            elif path.startswith("/events"):
+            elif path.startswith("/api/v1/analytics/events") or path.startswith("/events"):
                 response.headers["Access-Control-Allow-Origin"] = "http://course-service:8000"
                 response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
             
@@ -27,11 +27,11 @@ class GranularCORSMiddleware(BaseHTTPMiddleware):
         # 2. Handle actual requests
         response = await call_next(request)
         
-        if path.startswith("/metrics"):
+        if path.startswith("/api/v1/analytics/metrics") or path.startswith("/metrics"):
             response.headers["Access-Control-Allow-Origin"] = "*"
             response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "*"
-        elif path.startswith("/events"):
+        elif path.startswith("/api/v1/analytics/events") or path.startswith("/events"):
             response.headers["Access-Control-Allow-Origin"] = "http://course-service:8000"
             response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "*"

@@ -11,7 +11,8 @@ from ...schemas.enrollment import (
     EnrollmentCreate, EnrollmentUpdate, EnrollmentResponse,
     EnrollmentWithCourse, EnrollmentListResponse, EnrollmentStats
 )
-from ...core.auth import get_current_student, get_current_instructor
+from ...core.auth import get_current_student, get_current_instructor, get_current_token
+from ...services.analytics import record_course_enroll
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ router = APIRouter()
 def enroll_in_course(
     enrollment_in: EnrollmentCreate,
     current_user: dict = Depends(get_current_student),
+    access_token: str = Depends(get_current_token),
     db: Session = Depends(get_db),
 ):
     """
@@ -58,6 +60,7 @@ def enroll_in_course(
             user_id=current_user["user_id"],
             course_id=enrollment_in.course_id
         )
+        record_course_enroll(enrollment_in.course_id, access_token)
         return db_enrollment
     except Exception as e:
         raise HTTPException(

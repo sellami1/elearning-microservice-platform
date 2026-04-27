@@ -32,8 +32,17 @@ logger.info("Analytics service boot complete (env=%s, port=%s)", settings.ENV, s
 # --- CORS MIDDLEWARES ---
 app.add_middleware(GranularCORSMiddleware)
 
-app.include_router(events.router)
-app.include_router(metrics.router)
+app.include_router(events.router, prefix="/api/v1/analytics")
+app.include_router(metrics.router, prefix="/api/v1/analytics")
+
+@app.get("/api/v1/analytics")
+@app.get("/api/v1/analytics/")
+async def analytics_root():
+    return {
+        "service": "analytics-service",
+        "version": "1.0.0",
+        "endpoints": ["/events/*", "/metrics/*", "/health"]
+    }
 
 @app.get("/health")
 def health_check():

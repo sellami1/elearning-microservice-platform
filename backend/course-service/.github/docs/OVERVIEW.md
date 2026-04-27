@@ -27,6 +27,8 @@
 | MINIO_SECRET_KEY | Yes | MinIO secret key. |
 | MINIO_BUCKET_NAME | No | MinIO bucket name (default: `courses-media`). |
 | MINIO_SECURE | No | Enables HTTPS for MinIO when true (default: `False`). |
+| ANALYTICS_URL | No | Analytics service base URL used to record view and enrollment events. |
+| ANALYTICS_REQUEST_TIMEOUT_SECONDS | No | Timeout in seconds for analytics event calls (default: `2.0`). |
 
 ## Entry Point
 - Initializes FastAPI app with lifespan startup/shutdown that creates DB tables and disposes engine on shutdown.
